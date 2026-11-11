@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Automated Enter key press simulator with live countdown, event log, and a dynamic macOS AppleScript generator.">
+  <title>Enter Key Clicker — Automated Press Simulator</title>
+
+  <!-- Apply the saved theme before first paint to avoid a flash of the wrong theme -->
+  <script>
+    (function () {
+      try {
+        var saved = JSON.parse(localStorage.getItem("enterSim.settings") || "{}");
+        var theme = saved.theme || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+        document.documentElement.setAttribute("data-theme", theme);
+      } catch (e) { /* fall back to the default data-theme attribute */ }
+    })();
+  </script>
+
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236366f1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='2' y='5' width='20' height='14' rx='3'/%3E%3Cpath d='M8 10v1.5a2 2 0 0 0 2 2h6'/%3E%3Cpath d='m13.5 11 2.5 2.5-2.5 2.5'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="5" width="20" height="14" rx="3"></rect>
+          <path d="M8 10v1.5a2 2 0 0 0 2 2h6"></path>
+          <path d="m13.5 11 2.5 2.5-2.5 2.5"></path>
+        </svg>
+      </span>
+      <div class="brand-text">
+        <h1>Enter Key Clicker</h1>
+        <p class="tagline">Automated <kbd>&#9166;</kbd> press simulator &amp; macOS script generator</p>
+      </div>
+    </div>
+
+    <button id="themeToggle" class="icon-btn" type="button" aria-label="Toggle light/dark theme" title="Toggle theme">
+      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="4"></circle>
+        <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+      </svg>
+      <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+      </svg>
+    </button>
+  </header>
+
+  <main class="layout">
+
+    <!-- ============ Controls ============ -->
+    <section class="card card-controls" aria-labelledby="controls-heading">
+      <div class="card-head-row">
+        <h2 id="controls-heading">Controls</h2>
+        <span id="bridgeBadge" class="bridge-badge" title="Run `python3 bridge.py` in this folder (or double-click start-bridge.command) so the Start button presses real Enter in the frontmost app">Bridge: checking…</span>
+      </div>
+
+      <div class="countdown-panel">
+        <div class="countdown-ring" id="countdownRing">
+          <span id="countdown" class="countdown-value">5</span>
+          <span class="countdown-unit">s</span>
+        </div>
+        <p class="countdown-label" id="countdownLabel">until next press</p>
+      </div>
+
+      <div class="progress-track" aria-hidden="true">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+
+      <div class="field">
+        <label for="intervalInput">Interval (seconds, 1–9999)</label>
+        <div class="stepper" role="group" aria-label="Quick adjust interval">
+          <button type="button" class="chip" data-adjust="-1" aria-label="Decrease interval by 1 second">&minus;1s</button>
+          <input id="intervalInput" name="interval" type="number" inputmode="numeric" min="1" max="9999" step="1" value="5" autocomplete="off">
+          <button type="button" class="chip" data-adjust="1" aria-label="Increase interval by 1 second">+1s</button>
+          <button type="button" class="chip" data-adjust="10" aria-label="Increase interval by 10 seconds">+10s</button>
+          <button type="button" class="chip" data-adjust="60" aria-label="Increase interval by 60 seconds">+60s</button>
+        </div>
+        <p class="field-error" id="intervalError" role="alert" hidden>Interval must be between 1 and 9999 seconds.</p>
+      </div>
+
+      <fieldset class="fieldset">
+        <legend>Repeat mode</legend>
+
+        <label class="radio-row">
+          <input type="radio" name="repeatMode" value="infinite" checked>
+          <span class="radio-text">
+            <span class="radio-title">Run infinitely</span>
+            <span class="radio-hint">Press forever until stopped</span>
+          </span>
+        </label>
+
+        <label class="radio-row">
+          <input type="radio" name="repeatMode" value="custom">
+          <span class="radio-text">
+            <span class="radio-title">Stop after custom count</span>
+            <span class="radio-hint">Run a fixed number of presses (1–9999)</span>
+          </span>
+        </label>
+
+        <div class="field field-count" id="countField">
+          <label for="repeatCountInput">Number of presses</label>
+          <input id="repeatCountInput" name="repeatCount" type="number" inputmode="numeric" min="1" max="9999" step="1" value="10" autocomplete="off">
+          <p class="field-error" id="countError" role="alert" hidden>Count must be between 1 and 9999.</p>
+        </div>
+      </fieldset>
+
+      <div class="action-row">
+        <button id="startStopBtn" type="button" class="btn btn-primary">
+          <svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg>
+          <svg class="icon-stop" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"></rect></svg>
+          <span id="startStopLabel">Start</span>
+        </button>
+        <button id="resetBtn" type="button" class="btn btn-ghost">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 12a9 9 0 1 0 2.64-6.36"></path>
+            <path d="M3 4v5h5"></path>
+          </svg>
+          Reset
+        </button>
+        <span class="shortcut-hint">Toggle with <kbd>Space</kbd> / <kbd>Esc</kbd></span>
+      </div>
+
+      <dl class="stats">
+        <div class="stat">
+          <dt>Presses this run</dt>
+          <dd id="cyclePresses">0</dd>
+        </div>
+        <div class="stat">
+          <dt>Status</dt>
+          <dd id="statusText">Idle</dd>
+        </div>
+      </dl>
+    </section>
+
+    <!-- ============ Test Target ============ -->
+    <section class="card card-target" aria-labelledby="target-heading">
+      <h2 id="target-heading">Test Target</h2>
+
+      <div class="target-stage">
+        <div class="keycap" id="keycap" aria-hidden="true">
+          <span class="keycap-symbol">&#9166;</span>
+          <span class="keycap-text">Enter</span>
+          <span class="keycap-code">keyCode&nbsp;13</span>
+        </div>
+
+        <div class="big-counter">
+          <span id="totalPresses" class="big-counter-value" aria-live="polite">0</span>
+          <span class="big-counter-label">Total presses</span>
+        </div>
+      </div>
+
+      <form id="targetForm" autocomplete="off">
+        <label class="field-label" for="targetInput">Target field</label>
+        <input id="targetInput" type="text" placeholder="Focus here — every simulated Enter fires on this field" spellcheck="false">
+      </form>
+
+      <label class="switch-row" for="soundToggle">
+        <input id="soundToggle" type="checkbox" checked>
+        <span class="switch" aria-hidden="true"></span>
+        <span class="switch-text">Click sound (Web Audio)</span>
+      </label>
+    </section>
+
+    <!-- ============ Event Log ============ -->
+    <section class="card card-log" aria-labelledby="log-heading">
+      <div class="card-head-row">
+        <h2 id="log-heading">Event Log</h2>
+        <button id="clearLogBtn" type="button" class="btn btn-ghost btn-small">Clear</button>
+      </div>
+      <div id="log" class="log" role="log" aria-live="polite" aria-label="Simulated Enter press log" tabindex="0">
+        <p class="log-empty" id="logEmpty">No presses yet — hit Start to begin.</p>
+      </div>
+    </section>
+
+    <!-- ============ Cross-platform Script Generators ============ -->
+    <section class="card card-script" aria-labelledby="script-heading">
+      <h2 id="script-heading">System-wide Script Generator</h2>
+      <p class="script-desc">Send a real <kbd>&#9166;</kbd> in any desktop app. Each snippet updates live to match your interval and repeat mode. Pick your platform:</p>
+
+      <div class="platform-tabs" role="tablist" aria-label="Target platform">
+        <button id="tab-mac" class="platform-tab is-active" type="button" role="tab" aria-selected="true" aria-controls="scriptPanel" data-platform="mac">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M16 3a5 5 0 0 1-4 8 4 4 0 1 0-3 7h10a4 4 0 0 0 0-8h-1V8"></path>
+          </svg>
+          macOS
+        </button>
+        <button id="tab-windows" class="platform-tab" type="button" role="tab" aria-selected="false" aria-controls="scriptPanel" data-platform="windows">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 12h16M4 12a8 8 0 1 0 16 0M4 12a8 8 0 1 1 16 0"></path>
+          </svg>
+          Windows
+        </button>
+        <button id="tab-linux" class="platform-tab" type="button" role="tab" aria-selected="false" aria-controls="scriptPanel" data-platform="linux">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M6 3h12M6 3v6a6 6 0 0 0 12 0V3M9 21h6M12 15v6"></path>
+          </svg>
+          Linux
+        </button>
+      </div>
+
+      <div class="card-head-row card-head-row-script">
+        <p class="platform-note" id="platformNote" aria-live="polite"></p>
+      </div>
+
+      <div class="script-opt">
+        <div class="script-opt-head">
+          <h3 id="primaryOptLabel">Paste this block into Terminal</h3>
+          <div class="copy-group">
+            <button id="copyOsaBtn" type="button" class="btn btn-secondary btn-small" aria-label="Copy paste-ready osascript Terminal command">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m4 17 5-5-5-5"></path><path d="m12 19 7-7-7-7"></path>
+              </svg>
+              Copy Terminal command
+            </button>
+            <button id="copyScriptBtn" type="button" class="btn btn-secondary btn-small" aria-label="Copy script to clipboard">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="9" y="9" width="12" height="12" rx="2"></rect>
+                <path d="M5 15V5a2 2 0 0 1 2-2h10"></path>
+              </svg>
+              Copy script
+            </button>
+          </div>
+        </div>
+        <pre class="script-block" id="scriptPanel" role="tabpanel" tabindex="0"><code id="scriptCode" aria-label="Generated automation script"></code></pre>
+      </div>
+
+      <div class="script-opt" id="optSecondary" hidden>
+        <div class="script-opt-head">
+          <h3>AppleScript &mdash; for the Script Editor app only (do NOT paste this into Terminal)</h3>
+          <button id="copyScript2Btn" type="button" class="btn btn-secondary btn-small">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="9" y="9" width="12" height="12" rx="2"></rect>
+              <path d="M5 15V5a2 2 0 0 1 2-2h10"></path>
+            </svg>
+            Copy AppleScript
+          </button>
+        </div>
+        <pre class="script-block" tabindex="0"><code id="scriptCode2"></code></pre>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="app-footer">
+    <p>Browser sandboxes cannot press keys in other apps — use the AppleScript above for system-wide automation. Settings are saved locally in your browser.</p>
+  </footer>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
