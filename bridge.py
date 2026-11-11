@@ -121,6 +121,9 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        # Required when the page is served over https (GitHub Pages) and calls
+        # this http://127.0.0.1 helper — Chrome's Private Network Access check.
+        self.send_header("Access-Control-Allow-Private-Network", "true")
 
     def _json(self, code, obj):
         payload = json.dumps(obj).encode()
