@@ -54,7 +54,7 @@
     <section class="card card-controls" aria-labelledby="controls-heading">
       <div class="card-head-row">
         <h2 id="controls-heading">Controls</h2>
-        <span id="bridgeBadge" class="bridge-badge" title="Run `python3 bridge.py` in this folder (or double-click start-bridge.command) so the Start button presses real Enter in the frontmost app">Bridge: checking…</span>
+        <span id="bridgeBadge" class="bridge-badge" title="Run `python3 bridge.py` in this folder (or double-click start-bridge.command) so the Start button presses real Enter in the frontmost app. macOS must also allow it: System Settings → Privacy & Security → Accessibility → add the app running the bridge">Bridge: checking…</span>
       </div>
 
       <div class="countdown-panel">
@@ -245,7 +245,7 @@
   </main>
 
   <footer class="app-footer">
-    <p>Browser sandboxes cannot press keys in other apps — use the AppleScript above for system-wide automation. Settings are saved locally in your browser.</p>
+    <p>Browser sandboxes cannot press keys in other apps — use the scripts above for system-wide automation. macOS requires <strong>Accessibility permission</strong> (System Settings → Privacy &amp; Security → Accessibility) for the app running the presses, or the keys are silently dropped; Windows and Linux need none for the scripts above. Settings are saved locally in your browser.</p>
   </footer>
 
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>

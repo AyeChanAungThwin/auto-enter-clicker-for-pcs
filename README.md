@@ -8,6 +8,20 @@
 
 Run it by pressing [here](https://ayechanaungthwin.github.io/auto-enter-clicker-for-pcs) — no installs, no dependencies. To make the Start button press **real** Enter keys system-wide, double-click `start-bridge.command` (macOS) or drag the folder's scripts onto any machine (Windows/Linux versions are generated inside the app).
 
+[](#permissions)
+
+## Permissions (all platforms)
+
+[](#permissions)
+
+- **macOS** — accessibility permission **required**; synthetic keystrokes are blocked until you grant it to the app that runs the presses (Terminal, or whatever launches `bridge.py`).
+  - Enable: open the pane with `open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"`, click **+**, and add your terminal app (GUI only — `tccutil` can only reset, not grant).
+  - Disable: `sudo tccutil reset Accessibility` (revokes the permission for **all** apps).
+- **Windows** — accessibility permission **not required**; `SendKeys` works out of the box. Only caveats: if the target app runs as administrator, run PowerShell as administrator too or presses are blocked (UIPI), and if keystrokes get skipped, turn off the Filter Keys accessibility feature (Settings → Accessibility → Keyboard → Filter Keys).
+- **Linux** — accessibility permission **not required** on X11 (`xdotool` works out of the box). On Wayland (`ydotool`):
+  - Enable: `sudo usermod -aG input $USER` (log out and back in) and `sudo systemctl enable --now ydotoold`.
+  - Disable: `sudo gpasswd -d $USER input` and `sudo systemctl disable --now ydotoold`.
+
 [](#run-it)
 
 ## Features

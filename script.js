@@ -631,9 +631,9 @@ function applyRepeatMode(mode) {
  * Cross-platform script generation (macOS / Windows / Linux)
  * ------------------------------------------------------------------------ */
 const PLATFORM_NOTES = {
-  mac: "Option 1 is the recommended route: paste the whole block into Terminal and press Enter — presses go to the frontmost app while it runs (Ctrl+C stops). Option 2 is for Script Editor only.",
-  windows: "Paste this into a PowerShell window — presses go to the frontmost app while it runs (Ctrl+C stops).",
-  linux: "Requires xdotool (X11): `sudo apt install xdotool`. Paste into a shell — presses go to the frontmost app while it runs (Ctrl+C stops). On Wayland use ydotool instead.",
+  mac: "Accessibility permission REQUIRED — Enable: `open \"x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility\"` → + → add Terminal (GUI only; tccutil cannot grant). Disable: `sudo tccutil reset Accessibility` (revokes for all apps). Then paste the whole block into Terminal and press Enter — presses go to the frontmost app while it runs (Ctrl+C stops). Option 2 is for Script Editor only.",
+  windows: "Accessibility permission: NOT required — SendKeys works out of the box (only run PowerShell as administrator if the target app is elevated, else presses are blocked by UIPI). If synthetic keys get skipped, turn off the Filter Keys accessibility feature: Settings → Accessibility → Keyboard → Filter Keys. Paste this into a PowerShell window — presses go to the frontmost app while it runs (Ctrl+C stops).",
+  linux: "Accessibility permission: NOT required on X11 — xdotool works out of the box (`sudo apt install xdotool`). Wayland (ydotool): Enable: `sudo usermod -aG input $USER` (log out/in) + `sudo systemctl enable --now ydotoold`. Disable: `sudo gpasswd -d $USER input` + `sudo systemctl disable --now ydotoold`. Paste into a shell — presses go to the frontmost app while it runs (Ctrl+C stops).",
 };
 
 function buildAppleScript(interval, mode, count) {
