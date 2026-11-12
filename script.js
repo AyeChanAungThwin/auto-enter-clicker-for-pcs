@@ -34,7 +34,7 @@ const DEFAULT_SETTINGS = {
   repeatMode: "infinite", // "infinite" | "custom"
   repeatCount: 10,      // presses per run when repeatMode === "custom"
   clickBeforeEnter: false, // left-click at each step's target before Tab/Enter
-  tabBeforeEnter: true, // press Tab before Enter in every step
+  tabBeforeEnter: false, // press Tab before Enter in every step
   clickTargets: [],     // step targets; presses walk this in order (start empty)
   sound: true,          // Web Audio click feedback
   theme: "dark",        // "dark" | "light"
