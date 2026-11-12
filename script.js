@@ -106,13 +106,11 @@ const I18N = {
     bridge_connected: "Bridge: connected",
     bridge_offline: "Bridge: offline",
     bridge_pressing: "Bridge: pressing",
-    autostart_on: "Auto-start: on",
-    autostart_off: "Auto-start: off",
-    autostart_title_on: "The bridge starts by itself at every login — click to remove that",
-    autostart_title_off: "Make the bridge start by itself at every login on this PC",
-    autostart_enabled_toast: "Auto-start enabled — the bridge starts by itself at every login",
-    autostart_disabled_toast: "Auto-start removed",
-    autostart_fail_toast: "Could not change auto-start on this PC",
+    start_bridge: "Start bridge",
+    start_bridge_title: "One-click relaunch of bridge.py on this PC when it is not running. The very first time it needs a one-second setup: run the enable-bridge-launch script for your platform in this folder (Windows .bat, macOS .command, Linux .sh), and allow the browser's open-app dialog.",
+    bridge_launching_toast: "Launching the bridge — if the browser asks, allow opening Enter Key Clicker Bridge",
+    bridge_started_toast: "Bridge is online again — real pressing is available",
+    bridge_failed_toast: "Bridge did not come online — allow the browser dialog, or run {script} once and click Start bridge again",
     status_idle: "Idle",
     status_local: "Running (local)",
     status_real: "Running (real keys)",
@@ -227,13 +225,11 @@ const I18N = {
     bridge_connected: "Bridge: ချိတ်ဆက်ထားသည်",
     bridge_offline: "Bridge: အလုပ်မလုပ်ပါ",
     bridge_pressing: "Bridge: နှိပ်နေသည်",
-    autostart_on: "အလိုအလျောက် စတင်: ဖွင့်ထားသည်",
-    autostart_off: "အလိုအလျောက် စတင်: ပိတ်ထားသည်",
-    autostart_title_on: "ဘရစ်ဇ်သည် ၀င်ရောက်တိုင်း အလိုအလျောက် စတင်ပါသည် — ဖယ်ရှားရန် နှိပ်ပါ",
-    autostart_title_off: "ဤ PC တွင် ၀င်ရောက်တိုင်း ဘရစ်ဇ်ကို အလိုအလျောက် စတင်စေပါ",
-    autostart_enabled_toast: "အလိုအလျောက် စတင်ခြင်း ဖွင့်ပြီး — ၀င်ရောက်တိုင်း ဘရစ်ဇ်သည် အလိုအလျောက် စတင်ပါမည်",
-    autostart_disabled_toast: "အလိုအလျောက် စတင်ခြင်း ဖယ်ရှားပြီး",
-    autostart_fail_toast: "အလိုအလျောက် စတင်ခြင်း ပြောင်းလဲ၍ မရပါ",
+    start_bridge: "ဘရစ်ဇ် စတင်ရန်",
+    start_bridge_title: "PC တွင် bridge.py ကို နှိပ်တစ်ချက်ဖြင့် ပြန်စတင်သည်။ ပထမအကြိမ် သုံးမည်မှာ — ဖိုလ်ဒါအတွင်း ကိုယ့် platform အတွက် enable-bridge-launch script (Windows .bat၊ macOS .command၊ Linux .sh) ကို တစ်ကြိမ် လည်ပတ်ထားပြီး browser ၏ \"app ဖွင့်မလား\" dialog ကို ခွင့်ပြုပါ။",
+    bridge_launching_toast: "ဘရစ်ဇ် စတင်နေသည် — browser မေးလျှင် Enter Key Clicker Bridge ကို ဖွင့်ခွင့်ပြုပါ",
+    bridge_started_toast: "ဘရစ်ဇ် ပြန်လည်ချိတ်ဆက်ပြီး — စစ်မှန်ခလုတ်များ နှိပ်နိုင်ပါပြီ",
+    bridge_failed_toast: "ဘရစ်ဇ် မလာပါ — browser dialog ကို ခွင့်ပြုပါ (သို့) {script} ကို တစ်ကြိမ် လည်ပတ်ပြီး ထပ်နှိပ်ပါ",
     status_idle: "အနားယူနေသည်",
     status_local: "လည်ပတ်နေသည် (စာမျက်နှာအတွင်း)",
     status_real: "လည်ပတ်နေသည် (စစ်မှန်ခလုတ်များ)",
@@ -348,13 +344,11 @@ const I18N = {
     bridge_connected: "Bridge：已连接",
     bridge_offline: "Bridge：离线",
     bridge_pressing: "Bridge：按键中",
-    autostart_on: "开机自启：已开启",
-    autostart_off: "开机自启：未开启",
-    autostart_title_on: "bridge 已设置为每次登录自动启动 — 点击移除",
-    autostart_title_off: "让 bridge 在这台电脑每次登录时自动启动",
-    autostart_enabled_toast: "已开启开机自启 — 每次登录都会在后台启动 bridge",
-    autostart_disabled_toast: "已移除开机自启",
-    autostart_fail_toast: "无法更改这台电脑上的开机自启设置",
+    start_bridge: "启动 Bridge",
+    start_bridge_title: "bridge.py 不在运行时，一键在这台电脑上重新启动。首次使用需一次性设置：先在本文件夹运行对应平台的 enable-bridge-launch 脚本（Windows .bat、macOS .command、Linux .sh），并允许浏览器的“打开应用”弹窗。",
+    bridge_launching_toast: "正在启动 bridge — 如浏览器弹出询问，请允许打开 Enter Key Clicker Bridge",
+    bridge_started_toast: "Bridge 已恢复在线 — 可以发送真实按键",
+    bridge_failed_toast: "Bridge 未上线 — 请允许浏览器弹窗，或先运行一次 {script}，再点击“启动 Bridge”重试",
     status_idle: "空闲",
     status_local: "运行中（模拟）",
     status_real: "运行中（真实按键）",
@@ -469,13 +463,11 @@ const I18N = {
     bridge_connected: "Bridge: 연결됨",
     bridge_offline: "Bridge: 오프라인",
     bridge_pressing: "Bridge: 입력 중",
-    autostart_on: "자동 시작: 켜짐",
-    autostart_off: "자동 시작: 꺼짐",
-    autostart_title_on: "bridge가 매 로그인마다 자동 시작되고 있습니다 — 클릭하여 제거",
-    autostart_title_off: "이 PC에서 로그인할 때마다 bridge가 자동으로 시작되도록 설정",
-    autostart_enabled_toast: "자동 시작이 설정되었습니다 — 로그인마다 bridge가 백그라운드에서 시작됩니다",
-    autostart_disabled_toast: "자동 시작이 제거되었습니다",
-    autostart_fail_toast: "이 PC에서 자동 시작 설정을 변경할 수 없습니다",
+    start_bridge: "브리지 시작",
+    start_bridge_title: "bridge.py가 실행되지 않을 때 이 PC에서 한 번의 클릭으로 다시 시작합니다. 최초 1회 설정이 필요합니다: 이 폴더에서 플랫폼에 맞는 enable-bridge-launch 스크립트(Windows .bat, macOS .command, Linux .sh)를 실행하고 브라우저의 '앱 열기' 대화상자를 허용하세요.",
+    bridge_launching_toast: "브리지를 시작하는 중 — 브라우저가 묻는다면 Enter Key Clicker Bridge 열기를 허용하세요",
+    bridge_started_toast: "브리지가 다시 온라인 상태입니다 — 실제 키 입력이 가능합니다",
+    bridge_failed_toast: "브리지가 온라인이 되지 않았습니다 — 브라우저 대화상자를 허용하거나 {script}를 한 번 실행한 뒤 '브리지 시작'을 다시 누르세요",
     status_idle: "대기 중",
     status_local: "실행 중(페이지 내)",
     status_real: "실행 중(실제 키)",
@@ -575,7 +567,6 @@ function applyLanguage() {
     el.statusText.textContent = t("status_idle");
   }
   el.bridgeBadge.textContent = t(bridge.badgeKey || "bridge_offline");
-  if (bridge.autostart !== null) updateAutoStartBtn(bridge.autostart); // re-localize the toggle
   updateScript();
 }
 
@@ -612,8 +603,7 @@ const el = {
   targetInput: $("#targetInput"),
   soundToggle: $("#soundToggle"),
   bridgeBadge: $("#bridgeBadge"),
-  autoStartBtn: $("#autoStartBtn"),
-  autoStartLabel: $("#autoStartLabel"),
+  startBridgeBtn: $("#startBridgeBtn"),
   totalPresses: $("#totalPresses"),
   cyclePresses: $("#cyclePresses"),
   statusText: $("#statusText"),
@@ -700,7 +690,6 @@ const bridge = {
   lastPresses: 0,
   startedAt: 0,
   badgeKey: "bridge_offline", // i18n key of the current badge label
-  autostart: null, // null = unknown/offline — the button stays hidden
 };
 
 /* --------------------------------------------------------------------------
@@ -1040,13 +1029,9 @@ function setBridgeBadge(key, cssClass) {
   if (cssClass) el.bridgeBadge.classList.add(cssClass);
 }
 
-function updateAutoStartBtn(enabled) {
-  bridge.autostart = enabled;
-  el.autoStartBtn.hidden = false;
-  el.autoStartBtn.disabled = false;
-  el.autoStartLabel.textContent = t(enabled ? "autostart_on" : "autostart_off");
-  el.autoStartBtn.classList.toggle("is-on", enabled);
-  el.autoStartBtn.title = t(enabled ? "autostart_title_on" : "autostart_title_off");
+function showStartBridgeBtn() {
+  if (bridgeLaunchTimerId !== null) return; // a launch attempt is in flight
+  el.startBridgeBtn.hidden = false;
 }
 
 async function probeBridge() {
@@ -1059,18 +1044,73 @@ async function probeBridge() {
   }
   if (data && data.ok) {
     setBridgeBadge(data.running ? "bridge_pressing" : "bridge_connected", "is-on");
-    if (typeof data.autostart === "boolean") {
-      updateAutoStartBtn(data.autostart);
-    } else {
-      bridge.autostart = null;
-      el.autoStartBtn.hidden = true; // bridge predates the /autostart endpoint
-    }
+    el.startBridgeBtn.hidden = true;
+    el.startBridgeBtn.disabled = false;
   } else {
     setBridgeBadge("bridge_offline", "is-off");
-    bridge.autostart = null;
-    el.autoStartBtn.hidden = true;
+    showStartBridgeBtn();
   }
   return data;
+}
+
+/* --------------------------------------------------------------------------
+ * Bridge launcher — fires the enterclickerbridge:// handler (registered once
+ * per device via the enable-bridge-launch scripts) and polls /ping until the
+ * helper answers. The page tries it once on load; if it does not come up,
+ * the Start bridge button repeats it on demand.
+ * ------------------------------------------------------------------------ */
+const BRIDGE_PROTOCOL = "enterclickerbridge:";
+const BRIDGE_LAUNCH_WAIT_MS = 20000;
+let bridgeLaunchTimerId = null;
+
+function fireBridgeProtocol() {
+  // A hidden iframe keeps the page where it is; browsers still show their
+  // "open this app?" dialog (and block the fire entirely without it being
+  // registered — the poll below then just times out).
+  const frame = document.createElement("iframe");
+  frame.style.display = "none";
+  frame.src = `${BRIDGE_PROTOCOL}start`;
+  document.body.appendChild(frame);
+  setTimeout(() => frame.remove(), 2000);
+}
+
+function bridgeLaunchScriptName() {
+  return {
+    windows: "enable-bridge-launch-windows.bat",
+    mac: "enable-bridge-launch-mac.command",
+    linux: "enable-bridge-launch-linux.sh",
+  }[settings.platform];
+}
+
+function launchBridge(auto) {
+  if (bridgeLaunchTimerId !== null) return;
+  el.startBridgeBtn.disabled = true;
+  if (!auto) showToast(t("bridge_launching_toast"), 10000);
+
+  fireBridgeProtocol();
+
+  let waited = 0;
+  bridgeLaunchTimerId = setInterval(async () => {
+    waited += 1000;
+    const data = await probeBridge();
+    if (data && data.ok) {
+      clearInterval(bridgeLaunchTimerId);
+      bridgeLaunchTimerId = null;
+      el.startBridgeBtn.disabled = false;
+      addSystemLog(t("bridge_started_toast"));
+      if (!auto) showToast(t("bridge_started_toast"));
+      return;
+    }
+    if (waited >= BRIDGE_LAUNCH_WAIT_MS) {
+      clearInterval(bridgeLaunchTimerId);
+      bridgeLaunchTimerId = null;
+      el.startBridgeBtn.disabled = false;
+      addSystemLog(t("bridge_failed_toast", { script: bridgeLaunchScriptName() }));
+      if (!auto) {
+        showToast(t("bridge_failed_toast", { script: bridgeLaunchScriptName() }), 8000);
+      }
+    }
+  }, 1000);
 }
 
 async function bridgeStartRequest() {
@@ -1124,6 +1164,7 @@ async function bridgePollTick() {
     stopRun("manual");
     addSystemLog(t("bridge_lost_log"));
     showToast(t("bridge_offline_toast"));
+    showStartBridgeBtn();
     return;
   }
 
@@ -2075,30 +2116,11 @@ el.repeatCountInput.addEventListener("keydown", (e) => {
 
 el.clearLogBtn.addEventListener("click", clearLog);
 
-// Auto-start: asks the running bridge to register/remove start-at-login for
-// whatever OS it runs on (Windows registry / macOS LaunchAgent / Linux XDG).
-el.autoStartBtn.addEventListener("click", async (e) => {
+// Start bridge: fires the enterclickerbridge:// launcher and polls until the
+// helper is reachable again (no-op if a launch attempt is already running).
+el.startBridgeBtn.addEventListener("click", (e) => {
   e.currentTarget.blur();
-  const enable = bridge.autostart === null ? true : !bridge.autostart;
-  el.autoStartBtn.disabled = true;
-  try {
-    const res = await fetch(`${BRIDGE_URL}/autostart`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ enable }),
-    });
-    const data = await res.json();
-    if (data && data.ok) {
-      updateAutoStartBtn(data.enabled);
-      showToast(t(data.enabled ? "autostart_enabled_toast" : "autostart_disabled_toast"));
-      addSystemLog(data.enabled ? t("autostart_enabled_toast") : t("autostart_disabled_toast"));
-    } else {
-      showToast(t("autostart_fail_toast"));
-    }
-  } catch {
-    showToast(t("autostart_fail_toast"));
-  }
-  el.autoStartBtn.disabled = false;
+  launchBridge(false);
 });
 
 el.soundToggle.addEventListener("change", () => {
@@ -2159,7 +2181,13 @@ function init() {
   applyTheme(settings.theme);
   el.langSelect.value = settings.lang;
   applyLanguage();
-  probeBridge();
+  // Auto-start the bridge on first page access. If the device has no
+  // registered launcher (or the browser blocks the fire without a user
+  // gesture), the attempt times out quietly and the Start bridge button
+  // — already shown — repeats it on click.
+  probeBridge().then((data) => {
+    if (!data || !data.ok) launchBridge(true);
+  });
 
   // Interval + repeat controls
   el.intervalInput.value = settings.interval;
