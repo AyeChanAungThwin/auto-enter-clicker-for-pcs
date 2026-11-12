@@ -806,6 +806,12 @@ kbd {
   color: var(--text-muted);
 }
 
+/* bridge is up but macOS Accessibility is not granted — presses won't land */
+.bridge-badge.is-warn {
+  color: var(--warning);
+  border-color: var(--warning);
+}
+
 /* ---------- Test target: keycap ---------- */
 .target-stage {
   display: flex;

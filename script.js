@@ -101,11 +101,12 @@ const I18N = {
     copy_script: "Copy script",
     secondary_heading: "AppleScript &mdash; for the Script Editor app only (do NOT paste this into Terminal)",
     copy_applescript: "Copy AppleScript",
-    footer_text: "Browser sandboxes cannot press keys in other apps — use the scripts above for system-wide automation, or run <strong>bridge.py</strong> so the Start button presses real keys on this PC: Windows needs no permission, Linux (X11) just needs <code>xdotool</code>, and macOS requires <strong>Accessibility permission</strong> (System Settings → Privacy &amp; Security → Accessibility) for the app running the bridge, or the keys are silently dropped. Settings are saved locally in your browser.",
+    footer_text: "Browser sandboxes cannot press keys in other apps — use the scripts above for system-wide automation, or run <strong>bridge.py</strong> so the Start button presses real keys on this PC: Windows needs no permission, Linux (X11) just needs <code>xdotool</code>, and macOS requires <strong>Accessibility permission</strong> (System Settings → Privacy & Security → Accessibility) for the app running the bridge, or the keys are silently dropped. Settings are saved locally in your browser.",
 
     bridge_connected: "Bridge: connected",
     bridge_offline: "Bridge: offline",
     bridge_pressing: "Bridge: pressing",
+    bridge_no_accessibility: "Bridge: Accessibility missing — real keys are dropped. System Settings → Privacy & Security → Accessibility → add Enter Key Clicker Bridge.",
     start_bridge: "Start bridge",
     stop_bridge: "Stop bridge",
     bridge_stopped: "Bridge stopped — real pressing is unavailable until it starts again",
@@ -222,11 +223,12 @@ const I18N = {
     copy_script: "Script ကူးယူ",
     secondary_heading: "AppleScript — Script Editor app အတွက်သာ (Terminal တွင် မထည့်ပါနှင့်)",
     copy_applescript: "AppleScript ကူးယူ",
-    footer_text: "Browser sandbox သည် အခြား app များတွင် ခလုတ်များ နှိပ်မပေးနိုင်ပါ — စနစ်တစ်ခုလုံး အလိုအလျောက် လုပ်ဆောင်ရန် အထက်ပါ script များကို အသုံးပြုပါ (သို့) ဒီ PC တွင် စစ်မှန်သော ခလုတ်များ နှိပ်စေရန် <strong>bridge.py</strong> ကို လည်ပတ်ပါ- Windows တွင် ခွင့်ပြုချက် မလိုပါ၊ Linux (X11) တွင် <code>xdotool</code> လိုသည်၊ macOS တွင် bridge လည်ပတ်သော app အတွက် <strong>Accessibility ခွင့်ပြုချက်</strong> လိုအပ်သည် (System Settings → Privacy &amp; Security → Accessibility)၊ မရှိလျှင် ခလုတ်များ တိတ်တဆိတ် ပယ်ခံရသည်။ ဆက်တင်များကို browser အတွင်း သိမ်းဆည်းသည်။",
+    footer_text: "Browser sandbox သည် အခြား app များတွင် ခလုတ်များ နှိပ်မပေးနိုင်ပါ — စနစ်တစ်ခုလုံး အလိုအလျောက် လုပ်ဆောင်ရန် အထက်ပါ script များကို အသုံးပြုပါ (သို့) ဒီ PC တွင် စစ်မှန်သော ခလုတ်များ နှိပ်စေရန် <strong>bridge.py</strong> ကို လည်ပတ်ပါ- Windows တွင် ခွင့်ပြုချက် မလိုပါ၊ Linux (X11) တွင် <code>xdotool</code> လိုသည်၊ macOS တွင် bridge လည်ပတ်သော app အတွက် <strong>Accessibility ခွင့်ပြုချက်</strong> လိုအပ်သည် (System Settings → Privacy & Security → Accessibility)၊ မရှိလျှင် ခလုတ်များ တိတ်တဆိတ် ပယ်ခံရသည်။ ဆက်တင်များကို browser အတွင်း သိမ်းဆည်းသည်။",
 
     bridge_connected: "Bridge: ချိတ်ဆက်ထားသည်",
     bridge_offline: "Bridge: အလုပ်မလုပ်ပါ",
     bridge_pressing: "Bridge: နှိပ်နေသည်",
+    bridge_no_accessibility: "Bridge: Accessibility ခွင့်ပြုချက် မရှိပါ — စစ်မှန်ခလုတ်များ တိတ်တဆိတ် ပယ်ခံရသည်။ System Settings → Privacy & Security → Accessibility တွင် Enter Key Clicker Bridge ကို ထည့်ပါ။",
     start_bridge: "ဘရစ်ဇ် စတင်ရန်",
     stop_bridge: "ဘရစ်ဇ် ရပ်ရန်",
     bridge_stopped: "ဘရစ်ဇ် ရပ်ပြီး — နောက်တစ်ကြိမ် စတင်သည့်အထိ စစ်မှန်ခလုတ်များ မနှိပ်နိုင်ပါ",
@@ -348,6 +350,7 @@ const I18N = {
     bridge_connected: "Bridge：已连接",
     bridge_offline: "Bridge：离线",
     bridge_pressing: "Bridge：按键中",
+    bridge_no_accessibility: "Bridge：缺少辅助功能权限 — 真实按键被静默丢弃。系统设置 → 隐私与安全性 → 辅助功能 → 添加 Enter Key Clicker Bridge。",
     stop_bridge: "停止 Bridge",
     bridge_stopped: "Bridge 已停止 — 重新启动前无法发送真实按键",
     start_bridge: "启动 Bridge",
@@ -469,6 +472,7 @@ const I18N = {
     bridge_connected: "Bridge: 연결됨",
     bridge_offline: "Bridge: 오프라인",
     bridge_pressing: "Bridge: 입력 중",
+    bridge_no_accessibility: "Bridge: 손쉬운 사용 권한 없음 — 실제 키가 조용히 무시됩니다. 시스템 설정 → 개인정보 보호 및 보안 → 손쉬운 사용 → Enter Key Clicker Bridge 추가.",
     stop_bridge: "브리지 중지",
     bridge_stopped: "브리지가 중지되었습니다 — 다시 시작할 때까지 실제 키 입력을 사용할 수 없습니다",
     start_bridge: "브리지 시작",
@@ -1034,12 +1038,13 @@ function addSystemLog(html) {
 function setBridgeBadge(key, cssClass) {
   bridge.badgeKey = key;
   el.bridgeBadge.textContent = t(key);
-  el.bridgeBadge.classList.remove("is-on", "is-off");
+  el.bridgeBadge.classList.remove("is-on", "is-off", "is-warn");
   if (cssClass) el.bridgeBadge.classList.add(cssClass);
 }
 
 function bridgeOnline() {
-  return bridge.badgeKey === "bridge_connected" || bridge.badgeKey === "bridge_pressing";
+  return bridge.badgeKey === "bridge_connected" || bridge.badgeKey === "bridge_pressing" ||
+         bridge.badgeKey === "bridge_no_accessibility";
 }
 
 /** The launcher-platform toggle: offline -> "Start bridge" (fires the
@@ -1064,7 +1069,12 @@ async function probeBridge() {
     data = null;
   }
   if (data && data.ok) {
-    setBridgeBadge(data.running ? "bridge_pressing" : "bridge_connected", "is-on");
+    if (data.accessibility === false && isMacBrowser()) {
+      // green here would lie: macOS drops every key event without trust
+      setBridgeBadge("bridge_no_accessibility", "is-warn");
+    } else {
+      setBridgeBadge(data.running ? "bridge_pressing" : "bridge_connected", "is-on");
+    }
   } else {
     setBridgeBadge("bridge_offline", "is-off");
   }

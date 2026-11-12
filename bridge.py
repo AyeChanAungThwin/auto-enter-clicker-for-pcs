@@ -237,6 +237,49 @@ def press_loop_platform_ok():
     return None
 
 
+def accessibility_trusted(prompt=False):
+    """True/False via macOS AXIsProcessTrustedWithOptions; None elsewhere.
+    Without Accessibility, CoreGraphics key events are SILENTLY dropped, so
+    the badge must tell the user rather than sit green while nothing lands.
+    With prompt=True, untrusted launches raise macOS's own "… wants to
+    control your computer" dialog naming the responsible app — which points
+    into System Settings → Privacy & Security → Accessibility."""
+    if sys.platform != "darwin":
+        return None
+    try:
+        import ctypes
+        coref = ctypes.CDLL(
+            "/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")
+        his = ctypes.CDLL(
+            "/System/Library/Frameworks/ApplicationServices.framework/"
+            "Frameworks/HIServices.framework/HIServices")
+        UTF8 = 0x08000100
+        coref.CFStringCreateWithCString.restype = ctypes.c_void_p
+        coref.CFStringCreateWithCString.argtypes = [
+            ctypes.c_void_p, ctypes.c_char_p, ctypes.c_uint32]
+        kcf_true = ctypes.c_void_p.in_dll(coref, "kCFBooleanTrue")
+        if prompt:
+            coref.CFDictionaryCreateMutable.restype = ctypes.c_void_p
+            coref.CFDictionaryCreateMutable.argtypes = [
+                ctypes.c_void_p, ctypes.c_long, ctypes.c_void_p, ctypes.c_void_p]
+            coref.CFDictionarySetValue.restype = ctypes.c_void_p
+            coref.CFDictionarySetValue.argtypes = [
+                ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p]
+            opts = coref.CFDictionaryCreateMutable(
+                None, 0,
+                ctypes.c_void_p.in_dll(coref, "kCFTypeDictionaryKeyCallBacks"),
+                ctypes.c_void_p.in_dll(coref, "kCFTypeDictionaryValueCallBacks"))
+            coref.CFDictionarySetValue(
+                opts, coref.CFStringCreateWithCString(
+                    None, b"AXTrustedCheckOptionPrompt", UTF8), kcf_true)
+            his.AXIsProcessTrustedWithOptions.restype = ctypes.c_bool
+            return bool(his.AXIsProcessTrustedWithOptions(opts))
+        his.AXIsProcessTrusted.restype = ctypes.c_bool
+        return bool(his.AXIsProcessTrusted())
+    except Exception:
+        return None
+
+
 class Bridge:
     def __init__(self):
         self.proc = None
@@ -267,13 +310,19 @@ class Bridge:
                 presses = int(done)
                 if self.count > 0:
                     presses = min(presses, self.count)
-            return {
+            status = {
                 "ok": True,
                 "running": running,
                 "interval": self.interval,
                 "count": self.count,
                 "presses": presses,
             }
+            # macOS only: presses are silently dropped until the app running
+            # the bridge is granted Accessibility — surface that to the page.
+            ax = accessibility_trusted()
+            if ax is not None:
+                status["accessibility"] = ax
+            return status
 
     def start(self, interval, count, click, tab, targets):
         with self.lock:
@@ -646,6 +695,10 @@ if __name__ == "__main__":
     print("Open the web app and press Start — presses will land in the frontmost app.")
     print("Stop this helper with Ctrl+C (or just close this window).")
     register_launcher()
+    if sys.platform == "darwin" and not accessibility_trusted():
+        # Raise macOS's permission dialog naming the responsible app —
+        # without it, key events are silently dropped and the page sits green.
+        accessibility_trusted(prompt=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

@@ -15,7 +15,7 @@ Run it by pressing [here](https://ayechanaungthwin.github.io/auto-enter-clicker-
 [](#permissions)
 
 - **macOS** — accessibility permission **required**; synthetic keystrokes are blocked until you grant it to the app that runs the presses (Terminal, or whatever launches `bridge.py`).
-  - Enable: open the pane with `open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"`, click **+**, and add your terminal app (GUI only — `tccutil` can only reset, not grant).
+  - Enable: open the pane with `open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"`, click **+**, and add your terminal app (GUI only — `tccutil` can only reset, not grant). When the bridge is started via `enterclickerbridge://` (web Start bridge button), **add `EnterClickerBridge`** — it is the app that owns the presses then, and macOS raises its "… wants to control your computer" dialog for it automatically on launch if untrusted. The page shows an amber **Bridge: Accessibility missing** badge when the bridge is online but untrusted (`/ping` reports `accessibility`).
   - Disable: `sudo tccutil reset Accessibility` (revokes the permission for **all** apps).
 - **Windows** — accessibility permission **not required**; `SendKeys` works out of the box. Only caveats: if the target app runs as administrator, run PowerShell as administrator too or presses are blocked (UIPI), and if keystrokes get skipped, turn off the Filter Keys accessibility feature (Settings → Accessibility → Keyboard → Filter Keys).
 - **Linux** — accessibility permission **not required** on X11 (`xdotool` works out of the box; the `bridge.py` helper and the generated scripts both use it — `sudo apt install xdotool`). On Wayland (`ydotool`):
