@@ -18,32 +18,544 @@ const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 /* --------------------------------------------------------------------------
  * Constants
  * ------------------------------------------------------------------------ */
-const INTERVAL_MIN = 5;
+const INTERVAL_MIN = 10;
 const INTERVAL_MAX = 9999;
 const COUNT_MIN = 1;
 const COUNT_MAX = 9999;
 const XY_MAX = 99999;
+const MAX_TARGETS = 20;        // max entries in the press-target list
+const STEP_DELAY_MS = 200;     // gap between the list steps inside one interval
 const MAX_LOG_ENTRIES = 300;
 const STORAGE_KEY = "enterSim.settings";
 const BRIDGE_URL = "http://127.0.0.1:8791"; // managed by bridge.py in this folder
 
 const DEFAULT_SETTINGS = {
-  interval: 5,          // seconds between presses
+  interval: 10,         // seconds between bursts
   repeatMode: "infinite", // "infinite" | "custom"
   repeatCount: 10,      // presses per run when repeatMode === "custom"
-  clickBeforeEnter: false, // left-click at (clickX, clickY) before each press
-  clickX: 0,            // click target, screen X
-  clickY: 0,            // click target, screen Y
+  clickBeforeEnter: false, // left-click at each step's target before Tab/Enter
+  tabBeforeEnter: true, // press Tab before Enter in every step
+  clickTargets: [],     // step targets; presses walk this in order (start empty)
   sound: true,          // Web Audio click feedback
   theme: "dark",        // "dark" | "light"
   platform: "mac",      // "mac" | "windows" | "linux"
+  lang: "en",           // "en" | "my" | "zh" | "ko" — UI language, default English
 };
+
+/* --------------------------------------------------------------------------
+ * Localization — English (default), Myanmar, Chinese, Korean
+ * ------------------------------------------------------------------------ */
+const I18N = {
+  /* ---- English (default) ---- */
+  en: {
+    tagline: 'Automated <kbd>&#9166;</kbd> press simulator &amp; macOS script generator',
+    theme_title: "Toggle theme",
+    theme_aria: "Toggle light/dark theme",
+    lang_aria: "Language",
+    stepper_aria: "Quick adjust interval",
+    chip_m1: "Decrease interval by 1 second",
+    chip_p1: "Increase interval by 1 second",
+    chip_p10: "Increase interval by 10 seconds",
+    chip_p60: "Increase interval by 60 seconds",
+    controls: "Controls",
+    bridge_badge_title: "Run `python3 bridge.py` in this folder (or double-click start-bridge.command) so the Start button presses real Enter in the frontmost app. macOS must also allow it: System Settings → Privacy & Security → Accessibility → add the app running the bridge",
+    until_next: "until next press",
+    interval_label: "Interval (seconds, 10–9999)",
+    interval_error: "Interval must be between 10 and 9999 seconds.",
+    seq_legend: "Press sequence",
+    click_title: "Mouse left-click first",
+    click_hint: "Tap each step's target screen coordinates before Tab/Enter",
+    tab_title: "Press Tab before Enter",
+    tab_hint: "Moves focus to the next field before each Enter press",
+    targets_label: "Press targets",
+    targets_hint: 'Every interval fires the whole list as a burst, one entry every 0.2 seconds, wrapping around: <strong>click &rarr; tab &rarr; enter</strong>. <strong>Pick</strong> adds a target (up to 20); <strong>Reset list</strong> clears everything until new targets are added.',
+    pick_title: "Adds a new target to the list: the bridge dims the whole PC screen with a crosshair overlay — click anywhere on the screen to add the target (Esc cancels). Without the bridge, an in-page reticle captures the cursor position after a short countdown.",
+    add_target: "Add target manually",
+    reset_targets: "Reset list",
+    target_remove_aria: "Remove this target",
+    targets_error: "All coordinates must be whole numbers between 0 and 99999.",
+    repeat_legend: "Repeat mode",
+    inf_title: "Run infinitely",
+    inf_hint: "Press forever until stopped",
+    custom_title: "Stop after custom count",
+    custom_hint: "Run a fixed number of presses (1–9999)",
+    count_label: "Number of presses",
+    count_error: "Count must be between 1 and 9999.",
+    reset: "Reset",
+    shortcut_hint: "Toggle with <kbd>Space</kbd> / <kbd>Esc</kbd>",
+    stats_cycle: "Presses this run",
+    stats_status: "Status",
+    target_heading: "Test Target",
+    total_label: "Total presses",
+    target_label: "Target field",
+    target_ph: "Focus here — every simulated Enter fires on this field",
+    sound_label: "Click sound (Web Audio)",
+    log_heading: "Event Log",
+    clear_log: "Clear",
+    log_aria: "Simulated Enter press log",
+    log_empty: "No presses yet — hit Start to begin.",
+    script_heading: "System-wide Script Generator",
+    script_desc: 'Send a real <kbd>&#9166;</kbd> in any desktop app. Each snippet updates live to match your interval and repeat mode. Pick your platform:',
+    tabs_aria: "Target platform",
+    copy_terminal: "Copy Terminal command",
+    copy_script: "Copy script",
+    secondary_heading: "AppleScript &mdash; for the Script Editor app only (do NOT paste this into Terminal)",
+    copy_applescript: "Copy AppleScript",
+    footer_text: "Browser sandboxes cannot press keys in other apps — use the scripts above for system-wide automation. macOS requires <strong>Accessibility permission</strong> (System Settings → Privacy &amp; Security → Accessibility) for the app running the presses, or the keys are silently dropped; Windows and Linux need none for the scripts above. Settings are saved locally in your browser.",
+
+    bridge_connected: "Bridge: connected",
+    bridge_offline: "Bridge: offline",
+    bridge_pressing: "Bridge: pressing",
+    status_idle: "Idle",
+    status_local: "Running (local)",
+    status_real: "Running (real keys)",
+    start: "Start",
+    stop: "Stop",
+    start_aria: "Start pressing Enter",
+    stop_aria: "Stop pressing Enter",
+    mode_infinite: "running infinitely",
+    mode_custom: "stopping after {n} presses",
+    started_local: "Started (local simulation) — interval <strong>{n}s</strong>, {mode}",
+    started_real: "Started (REAL keys via bridge) — interval <strong>{n}s</strong>, {mode}",
+    finished_log: "Finished — <strong>{n}</strong> presses completed",
+    finished_toast: "Done — {n} presses completed",
+    stopped_local: "Stopped — reset the countdown or press Start to resume",
+    stopped_real: "Stopped — real pressing ended",
+    reset_log: "Reset — counters cleared, log emptied",
+    reset_toast: "Reset complete",
+    log_cleared: "Event log cleared",
+    press_local: "Press <strong>#{n}</strong> — {seq} dispatched to test target",
+    press_bridge: "Press <strong>#{n}</strong> — {seq} (real events via bridge) sent to the frontmost app",
+    bridge_lost_log: "Bridge connection lost — helper (bridge.py) is not reachable",
+    bridge_offline_toast: "Bridge offline — run: python3 bridge.py",
+    bridge_rejected_log: "Bridge rejected start — falling back to local simulation",
+    real_toast: "Real pressing started — focus the target app",
+    aim_toast: "Aim anywhere on the PC screen and left-click to set the target (Esc cancels)",
+    inpage_toast: "Bridge not available — aim on this page; capture in {n}s · left-click to capture now · Esc cancels",
+    aiming_reticle: "{n}…",
+    aim_cancel_toast: "Picking cancelled — list unchanged",
+    target_added_toast: "Target #{n} added — ({x}, {y}) (global screen coordinates)",
+    target_added_page_toast: "Target #{n} added — ({x}, {y}) (page coordinates)",
+    reset_targets_toast: "List cleared — presses will only Tab → Enter until you add targets",
+    targets_count: "{n} target(s)",
+    targets_empty: "No targets — presses will only Tab → Enter",
+    list_full_toast: "List is full ({n} targets max) — remove a target first",
+    pick_nobridge_toast: "Bridge offline — aim and left-click on this page to add the target",
+    seq_prefix: "Sequence per press",
+    seq_click: "Click",
+    seq_tab: "Tab",
+    seq_enter: "Enter",
+    primary_mac: "Option 1 — paste this whole block into Terminal, then press Enter",
+    primary_windows: "Paste this into a PowerShell window",
+    primary_linux: "Paste this into a Terminal/shell window",
+    cmd_copied: "Terminal command copied",
+    script_copied: "{label} copied to clipboard",
+    applescript_copied: "AppleScript copied — open Script Editor and paste",
+    copy_failed: "Copy failed — select the code manually",
+    label_applescript: "AppleScript",
+    label_powershell: "PowerShell script",
+    label_bash: "bash script",
+    note_mac: "Accessibility permission REQUIRED — Enable: `open \"x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility\"` → + → add Terminal (GUI only; tccutil cannot grant). Disable: `sudo tccutil reset Accessibility` (revokes for all apps). Then paste the whole block into Terminal and press Enter — presses go to the frontmost app while it runs (Ctrl+C stops). Option 2 is for Script Editor only.",
+    note_windows: "Accessibility permission: NOT required — SendKeys works out of the box (only run PowerShell as administrator if the target app is elevated, else presses are blocked by UIPI). If synthetic keys get skipped, turn off the Filter Keys accessibility feature: Settings → Accessibility → Keyboard → Filter Keys. Paste this into a PowerShell window — presses go to the frontmost app while it runs (Ctrl+C stops).",
+    note_linux: "Accessibility permission: NOT required on X11 — xdotool works out of the box (`sudo apt install xdotool`). Wayland (ydotool): Enable: `sudo usermod -aG input $USER` (log out/in) + `sudo systemctl enable --now ydotoold`. Disable: `sudo gpasswd -d $USER input` + `sudo systemctl disable --now ydotoold`. Paste into a shell — presses go to the frontmost app while it runs (Ctrl+C stops).",
+  },
+
+  /* ---- မြန်မာ (Myanmar) ---- */
+  my: {
+    tagline: 'အလိုအလျောက် <kbd>&#9166;</kbd> နှိပ်မှု စမ်းသပ်ကိရိယာနှင့် macOS script ဖန်တီးစနစ်',
+    theme_title: "Theme ပြောင်းလဲရန်",
+    theme_aria: "အလင်း/အမှောင် theme ပြောင်းလဲရန်",
+    lang_aria: "ဘာသာစကား",
+    stepper_aria: "အချိန်ကာလ လျင်မြန်စွာ ချိန်ညှိရန်",
+    chip_m1: "အချိန်ကာလကို ၁ စက္ကန့် လျှော့ရန်",
+    chip_p1: "အချိန်ကာလကို ၁ စက္ကန့် တိုးရန်",
+    chip_p10: "အချိန်ကာလကို ၁၀ စက္ကန့် တိုးရန်",
+    chip_p60: "အချိန်ကာလကို ၆၀ စက္ကန့် တိုးရန်",
+    controls: "ထိန်းချုပ်မှုများ",
+    bridge_badge_title: "Start ခလုတ်သည် ရှေ့တန်း app တွင် စစ်မှန်သော Enter နှိပ်နိုင်ရန် ဖိုလ်ဒါအတွင်း `python3 bridge.py` ကို လည်ပတ်ပါ (သို့) start-bridge.command ကို နှစ်ချက်နှိပ်၍ဖွင့်ပါ။ macOS တွင်လည်း ခွင့်ပြုရမည် — System Settings → Privacy & Security → Accessibility → bridge လည်ပတ်နေသော app ကို ထည့်ပါ",
+    until_next: "နောက်တစ်ကြိမ် နှိပ်ရန် ကျန်ချိန်",
+    interval_label: "အချိန်ကာလ (စက္ကန့်၊ ၁၀–၉၉၉၉)",
+    interval_error: "အချိန်ကာလသည် စက္ကန့် ၁၀ မှ ၉၉၉၉ အတွင်း ရှိရမည်။",
+    seq_legend: "နှိပ်မှုအစဉ်",
+    click_title: "Enter မနှိပ်မှီ မောက်စ်ဘယ်ဘက်နှိပ်မှု",
+    click_hint: "Step တစ်ခုစီမတိုင်မီ ပန်းတိုင် screen ညွှန်းကိန်းတွင် ဘယ်ဘက်နှိပ်သည်",
+    tab_title: "Enter မနှိပ်မှီ Tab နှိပ်သည်",
+    tab_hint: "Enter တစ်ကြိမ်စီမတိုင်မီ focus ကို နောက် field သို့ ရွှေ့သည်",
+    targets_label: "နှိပ်မည့်ပန်းတိုင်များ",
+    targets_hint: 'Interval တစ်ကြိမ်တွင် list တစ်ခုလုံးကို 0.2 စက္ကန့်စီဖြင့် တစ်ခုပြီးတစ်ခု အစီအစဉ်တကျ (ပြန်လည်လည်ပတ်၍) နှိပ်သည် — <strong>click &rarr; tab &rarr; enter</strong>။ <strong>Pick</strong> ဖြင့် ပန်းတိုင် အသစ် ထည့်သည် (အများဆုံး ၂၀)။ <strong>Reset list</strong> ဖြင့် အားလုံးကို ရှင်းလင်းပြီး ပန်းတိုင်အသစ် ထပ်ထည့်မချင်း လစ်လုပ်သည်။',
+    pick_title: "List သို့ ပန်းတိုင် အသစ် ထည့်သည် — Bridge လည်ပတ်နေပါက PC မျက်နှာပြင်တစ်ခုလုံး မှောင်၍ crosshair ပြသည် — မျက်နှာပြင်ရှိ မည်နေရာမဆို နှိပ်၍ ထည့်ပါ (ပယ်ဖျက်ရန် Esc)။ Bridge မရှိလျှင် စာမျက်နှာအတွင်း reticle ဖြင့် ခဏစောင့်ပြီး နေရာဖမ်းယူသည်။",
+    add_target: "ပန်းတိုင် ကိုယ်တိုင် ထည့်ရန်",
+    reset_targets: "List ပြန်ညှိ",
+    target_remove_aria: "ဤပန်းတိုင်ကို ဖယ်ရှားရန်",
+    targets_error: "ညွှန်းကိန်းအားလုံးသည် ၀ မှ ၉၉၉၉၉ အတွင်း ကိန်းပြည့်များ ဖြစ်ရမည်။",
+    repeat_legend: "ထပ်ခါထပ်ခါ လုပ်ပုံစံ",
+    inf_title: "အဆုံးမရှိ လုပ်ဆောင်သည်",
+    inf_hint: "ရပ်တည်မည့်အချိန်အထိ ဆက်တိုက်နှိပ်သည်",
+    custom_title: "သတ်မှတ်အကြိမ်ရေအထိ လုပ်ပြီး ရပ်သည်",
+    custom_hint: "သတ်မှတ်အကြိမ်ရေ (၁–၉၉၉၉) အထိ နှိပ်သည်",
+    count_label: "နှိပ်မည့်အကြိမ်ရေ",
+    count_error: "အကြိမ်ရေသည် ၁ မှ ၉၉၉၉ အတွင်း ရှိရမည်။",
+    reset: "ပြန်ညှိ",
+    shortcut_hint: "<kbd>Space</kbd> / <kbd>Esc</kbd> ဖြင့် ပွင့်ပိတ်နိုင်သည်",
+    stats_cycle: "ဤအလုပ်အတွင်း နှိပ်မှုအရေအတွက်",
+    stats_status: "အခြေအနေ",
+    target_heading: "စမ်းသပ်ရန်နေရာ",
+    total_label: "စုစုပေါင်း နှိပ်မှုအရေအတွက်",
+    target_label: "ပန်းတိုင် field",
+    target_ph: "ဤနေရာတွင် focus ထားပါ — ဖြစ်ပေါ်သော Enter တိုင်း ဤကွက်တွင် ရောက်သည်",
+    sound_label: "နှိပ်သံ (Web Audio)",
+    log_heading: "မှတ်တမ်း",
+    clear_log: "ရှင်းလင်း",
+    log_aria: "Enter နှိပ်မှုမှတ်တမ်း",
+    log_empty: "မှတ်တမ်း မရှိသေးပါ — Start နှိပ်၍ စတင်ပါ။",
+    script_heading: "စနစ်တစ်ခုလုံး script ဖန်တီးပေးမှု",
+    script_desc: 'Desktop app များအတွင်း စစ်မှန်သော <kbd>&#9166;</kbd> ပို့နိုင်သည်။ Script များသည် သင့် အချိန်ကာလနှင့် repeat ပုံစံနှင့် ကိုက်အောင် ခလုတ်ဆင်သည်။ Platform ရွေးပါ:',
+    tabs_aria: "ပန်းတိုင် platform",
+    copy_terminal: "Terminal command ကူးယူ",
+    copy_script: "Script ကူးယူ",
+    secondary_heading: "AppleScript — Script Editor app အတွက်သာ (Terminal တွင် မထည့်ပါနှင့်)",
+    copy_applescript: "AppleScript ကူးယူ",
+    footer_text: "Browser sandbox သည် အခြား app များတွင် ခလုတ်များ နှိပ်မပေးနိုင်ပါ — စနစ်တစ်ခုလုံး အလိုအလျောက် လုပ်ဆောင်ရန် အထက်ပါ script များကို အသုံးပြုပါ။ macOS တွင် <strong>Accessibility ခွင့်ပြုချက်</strong> လိုအပ်သည် (System Settings → Privacy &amp; Security → Accessibility)၊ မရှိလျှင် ခလုတ်များ တိတ်တဆိတ် ပယ်ခံရသည်။ Windows နှင့် Linux တွင် အထက်ပါ script များအတွက် ခွင့်ပြုချက် မလိုပါ။ ဆက်တင်များကို browser အတွင်း သိမ်းဆည်းသည်။",
+
+    bridge_connected: "Bridge: ချိတ်ဆက်ထားသည်",
+    bridge_offline: "Bridge: အလုပ်မလုပ်ပါ",
+    bridge_pressing: "Bridge: နှိပ်နေသည်",
+    status_idle: "အနားယူနေသည်",
+    status_local: "လည်ပတ်နေသည် (စာမျက်နှာအတွင်း)",
+    status_real: "လည်ပတ်နေသည် (စစ်မှန်ခလုတ်များ)",
+    start: "စတင်",
+    stop: "ရပ်တန့်",
+    start_aria: "Enter နှိပ်မှု စတင်ရန်",
+    stop_aria: "Enter နှိပ်မှု ရပ်တန့်ရန်",
+    mode_infinite: "အဆုံးမရှိ လည်ပတ်နေသည်",
+    mode_custom: "{n} ကြိမ် နှိပ်ပြီးလျှင် ရပ်သည်",
+    started_local: "စတင်ခဲ့သည် (စာမျက်နှာအတွင်း စမ်းသပ်ချက်) — အချိန်ကာလ <strong>{n} စက္ကန့်</strong>၊ {mode}",
+    started_real: "စတင်ခဲ့သည် (bridge မှတဆင့် စစ်မှန်ခလုတ်များ) — အချိန်ကာလ <strong>{n} စက္ကန့်</strong>၊ {mode}",
+    finished_log: "ပြီးဆုံးပါပြီ — <strong>{n}</strong> ကြိမ် နှိပ်မှု ပြီးမြောက်",
+    finished_toast: "ပြီးဆုံးပါပြီ — {n} ကြိမ် နှိပ်မှု ပြီးမြောက်",
+    stopped_local: "ရပ်တန့်ပြီး — countdown ပြန်ညှိပါ (သို့) Start နှိပ်၍ ပြန်စတင်ပါ",
+    stopped_real: "ရပ်တန့်ပြီး — စစ်မှန်နှိပ်မှု ပြီးဆုံးသည်",
+    reset_log: "ပြန်ညှိခဲ့သည် — အရေအတွက်များ ရှင်းလင်းပြီး မှတ်တမ်း အလွတ်ဖြစ်သည်",
+    reset_toast: "ပြန်ညှိမှု ပြီးစီးပါပြီ",
+    log_cleared: "မှတ်တမ်း ရှင်းလင်းလိုက်သည်",
+    press_local: "နှိပ်မှု <strong>#{n}</strong> — {seq} ကို စမ်းသပ်ရာနေရာသို့ ပို့ခဲ့သည်",
+    press_bridge: "နှိပ်မှု <strong>#{n}</strong> — {seq} (bridge မှတဆင့် စစ်မှန်ဖြစ်ရပ်များ) ရှေ့တန်း app သို့ ပို့ခဲ့သည်",
+    bridge_lost_log: "Bridge ချိတ်ဆက်မှု ပျက်ပြယ်သည် — helper (bridge.py) ကို ဆက်သွယ်မရပါ",
+    bridge_offline_toast: "Bridge အလုပ်မလုပ်ပါ — python3 bridge.py ကို လည်ပတ်ပါ",
+    bridge_rejected_log: "Bridge က စတင်ခြင်း ငြင်းပယ်ခဲ့သည် — စာမျက်နှာအတွင်း စမ်းသပ်မှုသို့ ပြန်ကူးသည်",
+    real_toast: "စစ်မှန်နှိပ်မှု စတင်ပါပြီ — ပန်းတိုင် app တွင် focus ထားပါ",
+    aim_toast: "PC မျက်နှာပြင် မည်နေရာမဆို ပန်းတိုင်ထား၍ ဘယ်ဘက်နှိပ်ပါ (ပယ်ဖျက်ရန် Esc)",
+    inpage_toast: "Bridge မရနိုင်ပါ — ဤစာမျက်နှာပေါ်တွင် ပန်းတိုင်ထားပါ။ {n} စက္ကန့်တွင် ဖမ်းယူသည် · ချက်ချင်းဖမ်းရန် ဘယ်ဘက်နှိပ်ပါ · ပယ်ဖျက်ရန် Esc",
+    aiming_reticle: "{n}…",
+    aim_cancel_toast: "Picking ပယ်ဖျက်လိုက်သည် — list မပြောင်းလဲပါ",
+    target_added_toast: "ပန်းတိုင် #{n} ထည့်ပြီး — ({x}, {y}) (မျက်နှာပြင်တစ်ခုလုံးညွှန်းကိန်း)",
+    target_added_page_toast: "ပန်းတိုင် #{n} ထည့်ပြီး — ({x}, {y}) (စာမျက်နှာညွှန်းကိန်း)",
+    reset_targets_toast: "List ရှင်းလင်းပြီး — ပန်းတိုင် ထပ်ထည့်သည့်အထိ Tab → Enter သာ နှိပ်သည်",
+    targets_count: "ပန်းတိုင် {n} ခု",
+    targets_empty: "ပန်းတိုင် မရှိပါ — Tab → Enter သာ နှိပ်သည်",
+    list_full_toast: "List ပြည့်နေပါပြီ ({n} ခု အများဆုံး) — ပန်းတိုင်တစ်ခု ဖယ်ရှားပါ",
+    pick_nobridge_toast: "Bridge အလုပ်မလုပ်ပါ — ဤစာမျက်နှာပေါ်တွင် ပန်းတိုင်ထား၍ ဘယ်ဘက်နှိပ်ပါ",
+    seq_prefix: "Press တစ်ကြိမ်လျှင် အစဉ်",
+    seq_click: "Click",
+    seq_tab: "Tab",
+    seq_enter: "Enter",
+    primary_mac: "Option ၁ — code block တစ်ခုလုံးကို Terminal တွင် ထည့်၍ Enter နှိပ်ပါ",
+    primary_windows: "PowerShell window တွင် ထည့်ပါ",
+    primary_linux: "Terminal/shell window တွင် ထည့်ပါ",
+    cmd_copied: "Terminal command ကူးယူပြီး",
+    script_copied: "{label} ကို clipboard သို့ ကူးယူပြီး",
+    applescript_copied: "AppleScript ကူးယူပြီး — Script Editor ဖွင့်၍ ထည့်ပါ",
+    copy_failed: "ကူးယူမှု မအောင်မြင်ပါ — code ကို ကိုယ်တိုင် ရွေးချယ်ပါ",
+    label_applescript: "AppleScript",
+    label_powershell: "PowerShell script",
+    label_bash: "bash script",
+    note_mac: "Accessibility ခွင့်ပြုချက် လိုအပ်သည် — ဖွင့်ရန်: `open \"x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility\"` → + → Terminal ထည့်ပါ (GUI သာလျှင်; tccutil မှ ခွင့်ပြုမရ)။ ပယ်ဖျက်ရန်: `sudo tccutil reset Accessibility` (app အားလုံးကို ပြန်ရုပ်သတ်သည်)။ ပြီးလျှင် code block တစ်ခုလုံးကို Terminal တွင် ထည့်၍ Enter နှိပ်ပါ — လည်ပတ်နေစဉ် ရှေ့တန်း app သို့ နှိပ်မှုများ ရောက်သည် (Ctrl+C ဖြင့် ရပ်)။ Option ၂ သည် Script Editor အတွက်သာ။",
+    note_windows: "Accessibility ခွင့်ပြုချက် မလိုအပ်ပါ — SendKeys သည် ပုံသွင်းအတိုင်း လုပ်ဆောင်နိုင်သည် (ပန်းတိုင် app သည် administrator ဖြစ်လျှင် PowerShell ကိုလည်း administrator အဖြစ် လည်ပတ်ရမည်; မဟုတ်က UIPI သည် တားမြစ်သည်)။ ခလုတ်များ ကျော်လွှားခံရပါက Filter Keys feature ကို ပိတ်ပါ — Settings → Accessibility → Keyboard → Filter Keys။ PowerShell window တွင် ထည့်ပါ — လည်ပတ်နေစဉ် ရှေ့တန်း app သို့ နှိပ်မှုများ ရောက်သည် (Ctrl+C ဖြင့် ရပ်)။",
+    note_linux: "X11 တွင် Accessibility ခွင့်ပြုချက် မလိုအပ်ပါ — xdotool သည် ပုံသွင်းအတိုင်း လုပ်ဆောင်နိုင်သည် (`sudo apt install xdotool`)။ Wayland (ydotool) — ဖွင့်ရန်: `sudo usermod -aG input $USER` (ထွက်ပြီး ပြန်ဝင်) + `sudo systemctl enable --now ydotoold`။ ပိတ်ရန်: `sudo gpasswd -d $USER input` + `sudo systemctl disable --now ydotoold`။ Shell တွင် ထည့်ပါ — လည်ပတ်နေစဉ် ရှေ့တန်း app သို့ နှိပ်မှုများ ရောက်သည် (Ctrl+C ဖြင့် ရပ်)။",
+  },
+
+  /* ---- 中文 (Chinese) ---- */
+  zh: {
+    tagline: '自动 <kbd>&#9166;</kbd> 按键模拟器与 macOS 脚本生成器',
+    theme_title: "切换主题",
+    theme_aria: "切换浅色/深色主题",
+    lang_aria: "语言",
+    stepper_aria: "快速调整间隔",
+    chip_m1: "将间隔减少 1 秒",
+    chip_p1: "将间隔增加 1 秒",
+    chip_p10: "将间隔增加 10 秒",
+    chip_p60: "将间隔增加 60 秒",
+    controls: "控制",
+    bridge_badge_title: "在本文件夹中运行 `python3 bridge.py`（或双击 start-bridge.command），“Start”按钮才能向前台应用发送真实的 Enter。macOS 还需授权：系统设置 → 隐私与安全性 → 辅助功能 → 添加运行 bridge 的应用",
+    until_next: "距下一次按键",
+    interval_label: "间隔（秒，10–9999）",
+    interval_error: "间隔必须在 10 到 9999 秒之间。",
+    seq_legend: "按键流程",
+    click_title: "先点击鼠标左键",
+    click_hint: "每个步骤前，先在该步骤的目标屏幕坐标处执行左键点击",
+    tab_title: "Enter 前先按 Tab",
+    tab_hint: "每次按 Enter 前，先将焦点移到下一个字段",
+    targets_label: "按键目标",
+    targets_hint: '每个间隔将整个列表连续执行一遍，各项间隔 0.2 秒，循环往复：<strong>点击 &rarr; Tab &rarr; Enter</strong>。<strong>Pick</strong> 添加目标（最多 20 个）；<strong>重置列表</strong>会清空全部，直到重新添加目标。',
+    pick_title: "向列表添加新目标：bridge 运行时会让整个电脑屏幕变暗并显示跟随光标的十字准线 — 在屏幕任意位置左键单击即可添加目标（Esc 取消）。没有 bridge 时，页面内的准线会在短暂倒计时后捕获光标位置。",
+    add_target: "手动添加目标",
+    reset_targets: "重置列表",
+    target_remove_aria: "移除此目标",
+    targets_error: "所有坐标必须是 0 到 99999 之间的整数。",
+    repeat_legend: "重复模式",
+    inf_title: "无限运行",
+    inf_hint: "一直按键，直到手动停止",
+    custom_title: "按指定次数后停止",
+    custom_hint: "运行固定的按键次数（1–9999）",
+    count_label: "按键次数",
+    count_error: "次数必须在 1 到 9999 之间。",
+    reset: "重置",
+    shortcut_hint: "按 <kbd>Space</kbd> / <kbd>Esc</kbd> 切换",
+    stats_cycle: "本次运行按键数",
+    stats_status: "状态",
+    target_heading: "测试目标",
+    total_label: "总按键数",
+    target_label: "目标输入框",
+    target_ph: "在此输入框保持焦点 — 每次模拟 Enter 都会作用于这里",
+    sound_label: "按键音（Web Audio）",
+    log_heading: "事件日志",
+    clear_log: "清空",
+    log_aria: "模拟 Enter 按键日志",
+    log_empty: "暂无按键记录 — 按 Start 开始。",
+    script_heading: "系统级脚本生成器",
+    script_desc: '向任意桌面应用发送真实的 <kbd>&#9166;</kbd>。脚本会根据间隔和重复模式实时更新。选择平台：',
+    tabs_aria: "目标平台",
+    copy_terminal: "复制终端命令",
+    copy_script: "复制脚本",
+    secondary_heading: "AppleScript — 仅用于脚本编辑器（请勿粘贴到终端）",
+    copy_applescript: "复制 AppleScript",
+    footer_text: "浏览器沙盒无法在其他应用中按键 — 系统级按键请使用上方脚本。macOS 需要<strong>辅助功能权限</strong>（系统设置 → 隐私与安全性 → 辅助功能），否则按键会被静默丢弃；Windows 和 Linux 运行上述脚本无需权限。设置保存在浏览器本地。",
+
+    bridge_connected: "Bridge：已连接",
+    bridge_offline: "Bridge：离线",
+    bridge_pressing: "Bridge：按键中",
+    status_idle: "空闲",
+    status_local: "运行中（模拟）",
+    status_real: "运行中（真实按键）",
+    start: "开始",
+    stop: "停止",
+    start_aria: "开始按 Enter",
+    stop_aria: "停止按 Enter",
+    mode_infinite: "无限运行",
+    mode_custom: "按 {n} 次后停止",
+    started_local: "已开始（本地模拟）— 间隔 <strong>{n} 秒</strong>，{mode}",
+    started_real: "已开始（经 bridge 发送真实按键）— 间隔 <strong>{n} 秒</strong>，{mode}",
+    finished_log: "已完成 — <strong>{n}</strong> 次按键全部完成",
+    finished_toast: "完成 — 共 {n} 次按键",
+    stopped_local: "已停止 — 重置倒计时或按 Start 继续",
+    stopped_real: "已停止 — 真实按键结束",
+    reset_log: "已重置 — 计数清零，日志已清空",
+    reset_toast: "重置完成",
+    log_cleared: "日志已清空",
+    press_local: "第 <strong>#{n}</strong> 次按键 — {seq} 已发送到测试目标",
+    press_bridge: "第 <strong>#{n}</strong> 次按键 — {seq}（经 bridge 发送的真实事件）已发送到前台应用",
+    bridge_lost_log: "Bridge 连接丢失 — 辅助程序（bridge.py）不可达",
+    bridge_offline_toast: "Bridge 离线 — 请运行：python3 bridge.py",
+    bridge_rejected_log: "Bridge 拒绝启动 — 回退到本地模拟",
+    real_toast: "真实按键已开始 — 请聚焦目标应用",
+    aim_toast: "在 PC 屏幕任意位置移动光标并左键单击以设定目标（Esc 取消）",
+    inpage_toast: "Bridge 不可用 — 请在本页上瞄准；{n} 秒后捕获 · 左键单击立即捕获 · Esc 取消",
+    aiming_reticle: "{n}…",
+    aim_cancel_toast: "已取消选取 — 列表未更改",
+    target_added_toast: "已添加目标 #{n} — ({x}, {y})（全屏坐标）",
+    target_added_page_toast: "已添加目标 #{n} — ({x}, {y})（页面坐标）",
+    reset_targets_toast: "列表已清空 — 添加目标前按键将只执行 Tab → Enter",
+    targets_count: "共 {n} 个目标",
+    targets_empty: "无目标 — 按键将只执行 Tab → Enter",
+    list_full_toast: "列表已满（最多 {n} 个）— 请先移除一个目标",
+    pick_nobridge_toast: "Bridge 离线 — 请在本页上瞄准并左键单击以添加目标",
+    seq_prefix: "每次按键的流程",
+    seq_click: "点击",
+    seq_tab: "Tab",
+    seq_enter: "Enter",
+    primary_mac: "选项 1 — 将整个代码块粘贴到终端，然后按回车",
+    primary_windows: "将此粘贴到 PowerShell 窗口",
+    primary_linux: "将此粘贴到终端/shell 窗口",
+    cmd_copied: "终端命令已复制",
+    script_copied: "{label} 已复制到剪贴板",
+    applescript_copied: "AppleScript 已复制 — 请打开脚本编辑器并粘贴",
+    copy_failed: "复制失败 — 请手动选择代码",
+    label_applescript: "AppleScript",
+    label_powershell: "PowerShell 脚本",
+    label_bash: "bash 脚本",
+    note_mac: "需要辅助功能权限 — 启用：`open \"x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility\"` → + → 添加 Terminal（仅限 GUI；tccutil 无法授权）。停用：`sudo tccutil reset Accessibility`（会撤销全部应用）。然后将整个代码块粘贴到终端并按回车 — 运行期间按键发送到前台应用（Ctrl+C 停止）。选项 2 仅用于脚本编辑器。",
+    note_windows: "无需辅助功能权限 — SendKeys 开箱即用（若目标应用以管理员运行，也需以管理员运行 PowerShell，否则按键被 UIPI 拦截）。若按键被跳过，请关闭筛选键功能：设置 → 辅助功能 → 键盘 → 筛选键。粘贴到 PowerShell 窗口 — 运行期间按键发送到前台应用（Ctrl+C 停止）。",
+    note_linux: "X11 下无需辅助功能权限 — xdotool 开箱即用（`sudo apt install xdotool`）。Wayland（ydotool）：启用：`sudo usermod -aG input $USER`（退出重新登录）+ `sudo systemctl enable --now ydotoold`。停用：`sudo gpasswd -d $USER input` + `sudo systemctl disable --now ydotoold`。粘贴到 shell — 运行期间按键发送到前台应用（Ctrl+C 停止）。",
+  },
+
+  /* ---- 한국어 (Korean) ---- */
+  ko: {
+    tagline: '자동 <kbd>&#9166;</kbd> 키 입력 시뮬레이터 & macOS 스크립트 생성기',
+    theme_title: "테마 전환",
+    theme_aria: "라이트/다크 테마 전환",
+    lang_aria: "언어",
+    stepper_aria: "간격 빠른 조정",
+    chip_m1: "간격 1초 감소",
+    chip_p1: "간격 1초 증가",
+    chip_p10: "간격 10초 증가",
+    chip_p60: "간격 60초 증가",
+    controls: "컨트롤",
+    bridge_badge_title: "Start 버튼이 포그라운드 앱에 실제 Enter를 입력하려면 이 폴더에서 `python3 bridge.py`를 실행하세요(또는 start-bridge.command 더블클릭). macOS에서도 권한이 필요합니다: 시스템 설정 → 개인정보 보호 및 보안 → 손쉬운 사용 → bridge를 실행하는 앱 추가",
+    until_next: "다음 입력까지",
+    interval_label: "간격(초, 10–9999)",
+    interval_error: "간격은 10초에서 9999초 사이여야 합니다.",
+    seq_legend: "입력 순서",
+    click_title: "Enter 전에 마우스 왼쪽 클릭",
+    click_hint: "각 단계 전 해당 단계의 대상 화면 좌표에서 왼쪽 클릭을 수행합니다",
+    tab_title: "Enter 전에 Tab 누르기",
+    tab_hint: "Enter를 누르기 전에 포커스를 다음 필드로 이동합니다",
+    targets_label: "입력 대상 목록",
+    targets_hint: '간격마다 목록 전체를 한 번에 실행하며 각 항목은 0.2초 간격, 순서대로 반복합니다: <strong>클릭 &rarr; Tab &rarr; Enter</strong>. <strong>Pick</strong>은 대상을 추가하고(최대 20개), <strong>목록 초기화</strong>는 새 대상을 추가하기 전까지 모두 비웁니다.',
+    pick_title: "목록에 새 대상을 추가합니다: bridge가 실행 중이면 PC 화면 전체가 어두워지고 커서를 따르는 십자선이 표시됩니다 — 화면 아무 곳이나 왼쪽 클릭하여 대상을 추가하세요(Esc로 취소). bridge가 없으면 페이지 내 십자선이 잠시 카운트다운 후 커서 위치를 캡처합니다.",
+    add_target: "대상 직접 추가",
+    reset_targets: "목록 초기화",
+    target_remove_aria: "이 대상 제거",
+    targets_error: "모든 좌표는 0에서 99999 사이의 정수여야 합니다.",
+    repeat_legend: "반복 모드",
+    inf_title: "무한 실행",
+    inf_hint: "중지할 때까지 계속 입력합니다",
+    custom_title: "지정 횟수 후 중지",
+    custom_hint: "지정한 횟수(1–9999)만큼 입력합니다",
+    count_label: "입력 횟수",
+    count_error: "횟수는 1에서 9999 사이여야 합니다.",
+    reset: "초기화",
+    shortcut_hint: "<kbd>Space</kbd> / <kbd>Esc</kbd>로 전환",
+    stats_cycle: "이번 실행 입력 수",
+    stats_status: "상태",
+    target_heading: "테스트 대상",
+    total_label: "총 입력 수",
+    target_label: "대상 필드",
+    target_ph: "여기에 포커스를 두세요 — 시뮬레이트된 Enter가 이 필드로 전달됩니다",
+    sound_label: "클릭 사운드(Web Audio)",
+    log_heading: "이벤트 로그",
+    clear_log: "지우기",
+    log_aria: "시뮬레이트된 Enter 입력 로그",
+    log_empty: "기록이 없습니다 — Start를 누르세요.",
+    script_heading: "시스템 전체 스크립트 생성기",
+    script_desc: '어떤 데스크톱 앱에든 실제 <kbd>&#9166;</kbd>를 보냅니다. 스크립트는 간격과 반복 설정에 맞춰 실시간으로 갱신됩니다. 플랫폼을 선택하세요:',
+    tabs_aria: "대상 플랫폼",
+    copy_terminal: "터미널 명령 복사",
+    copy_script: "스크립트 복사",
+    secondary_heading: "AppleScript — 스크립트 편집기 전용(터미널에 붙여넣지 마세요)",
+    copy_applescript: "AppleScript 복사",
+    footer_text: "브라우저 샌드박스는 다른 앱에 키를 보낼 수 없습니다 — 시스템 전체 입력에는 위의 스크립트를 사용하세요. macOS는 <strong>손쉬운 사용 권한</strong>이 필요(시스템 설정 → 개인정보 보호 및 보안 → 손쉬운 사용)하며, 권한이 없으면 키 조작이 조용히 무시됩니다. Windows와 Linux는 위 스크립트에 권한이 필요 없습니다. 설정은 브라우저에 로컬로 저장됩니다.",
+
+    bridge_connected: "Bridge: 연결됨",
+    bridge_offline: "Bridge: 오프라인",
+    bridge_pressing: "Bridge: 입력 중",
+    status_idle: "대기 중",
+    status_local: "실행 중(페이지 내)",
+    status_real: "실행 중(실제 키)",
+    start: "시작",
+    stop: "정지",
+    start_aria: "Enter 입력 시작",
+    stop_aria: "Enter 입력 정지",
+    mode_infinite: "무한 실행 중",
+    mode_custom: "{n}회 입력 후 중지",
+    started_local: "시작됨(페이지 내 시뮬레이션) — 간격 <strong>{n}초</strong>, {mode}",
+    started_real: "시작됨(bridge를 통한 실제 키) — 간격 <strong>{n}초</strong>, {mode}",
+    finished_log: "완료 — <strong>{n}</strong>회 입력 완료",
+    finished_toast: "완료 — {n}회 입력 완료",
+    stopped_local: "중지됨 — 카운트다운을 초기화하거나 Start를 눌러 재개하세요",
+    stopped_real: "중지됨 — 실제 입력이 종료되었습니다",
+    reset_log: "초기화됨 — 카운터가 지워지고 로그가 비워졌습니다",
+    reset_toast: "초기화 완료",
+    log_cleared: "이벤트 로그가 지워졌습니다",
+    press_local: "입력 <strong>#{n}</strong> — {seq} → 테스트 대상으로 전송됨",
+    press_bridge: "입력 <strong>#{n}</strong> — {seq} (bridge를 통한 실제 이벤트) → 포그라운드 앱으로 전송됨",
+    bridge_lost_log: "Bridge 연결 끊김 — helper(bridge.py)에 연결할 수 없습니다",
+    bridge_offline_toast: "Bridge 오프라인 — 실행: python3 bridge.py",
+    bridge_rejected_log: "Bridge가 시작을 거부했습니다 — 페이지 내 시뮬레이션으로 전환합니다",
+    real_toast: "실제 입력이 시작되었습니다 — 대상 앱에 포커스를 두세요",
+    aim_toast: "PC 화면 어느 곳이든 조준하고 왼쪽 클릭하여 대상을 지정하세요(Esc로 취소)",
+    inpage_toast: "Bridge를 사용할 수 없습니다 — 이 페이지에서 조준하세요. {n}초 후 캡처 · 왼쪽 클릭으로 즉시 캡처 · Esc로 취소",
+    aiming_reticle: "{n}…",
+    aim_cancel_toast: "선택이 취소되었습니다 — 목록은 변경되지 않았습니다",
+    target_added_toast: "대상 #{n} 추가됨 — ({x}, {y}) (전체 화면 좌표)",
+    target_added_page_toast: "대상 #{n} 추가됨 — ({x}, {y}) (페이지 좌표)",
+    reset_targets_toast: "목록이 비워졌습니다 — 대상을 추가하기 전까지 입력은 Tab → Enter만 수행합니다",
+    targets_count: "대상 {n}개",
+    targets_empty: "대상 없음 — 입력은 Tab → Enter만 수행합니다",
+    list_full_toast: "목록이 가득 찼습니다(최대 {n}개) — 먼저 대상을 제거하세요",
+    pick_nobridge_toast: "Bridge 오프라인 — 이 페이지에서 조준하여 왼쪽 클릭으로 대상을 추가하세요",
+    seq_prefix: "한 번의 입력 순서",
+    seq_click: "클릭",
+    seq_tab: "Tab",
+    seq_enter: "Enter",
+    primary_mac: "옵션 1 — 코드 블록 전체를 터미널에 붙여넣고 Enter를 누르세요",
+    primary_windows: "PowerShell 창에 붙여넣으세요",
+    primary_linux: "터미널/셸 창에 붙여넣으세요",
+    cmd_copied: "터미널 명령이 복사되었습니다",
+    script_copied: "{label}이(가) 클립보드에 복사되었습니다",
+    applescript_copied: "AppleScript가 복사되었습니다 — 스크립트 편집기를 열어 붙여넣으세요",
+    copy_failed: "복사 실패 — 코드를 직접 선택하세요",
+    label_applescript: "AppleScript",
+    label_powershell: "PowerShell 스크립트",
+    label_bash: "bash 스크립트",
+    note_mac: "손쉬운 사용 권한 필수 — 활성화: `open \"x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility\"` → + → Terminal 추가(GUI만 가능; tccutil은 권한 부여 불가). 비활성화: `sudo tccutil reset Accessibility`(모든 앱이 해제됨). 그런 다음 코드 블록 전체를 터미널에 붙여넣고 Enter를 누르세요 — 실행 중 포그라운드 앱으로 입력됩니다(Ctrl+C로 중지). 옵션 2는 스크립트 편집기 전용입니다.",
+    note_windows: "손쉬운 사용 권한 불필요 — SendKeys는 별도 설정 없이 동작합니다(대상 앱이 관리자 권한이면 PowerShell도 관리자로 실행해야 하며, 아니면 UIPI가 차단). 키가 건너뛰어지면 필터 키 기능을 끄세요: 설정 → 접근성 → 키보드 → 필터 키. PowerShell 창에 붙여넣으세요 — 실행 중 포그라운드 앱으로 입력됩니다(Ctrl+C로 중지).",
+    note_linux: "X11에서는 손쉬운 사용 권한 불필요 — xdotool은 별도 설정 없이 동작합니다(`sudo apt install xdotool`). Wayland(ydotool): 활성화: `sudo usermod -aG input $USER`(로그아웃/로그인) + `sudo systemctl enable --now ydotoold`. 비활성화: `sudo gpasswd -d $USER input` + `sudo systemctl disable --now ydotoold`. 셸에 붙여넣으세요 — 실행 중 포그라운드 앱으로 입력됩니다(Ctrl+C로 중지).",
+  },
+};
+
+const I18N_LANGS = Object.keys(I18N);
+
+/** Translates a key in the current UI language, with {param} substitution. */
+function t(key, params) {
+  const pack = I18N[settings.lang] || I18N.en;
+  let str = pack[key] !== undefined ? pack[key] : (I18N.en[key] !== undefined ? I18N.en[key] : key);
+  if (params) {
+    for (const [name, value] of Object.entries(params)) {
+      str = str.replace(new RegExp(`\\{${name}\\}`, "g"), String(value));
+    }
+  }
+  return str;
+}
+
+/** Applies every [data-i18n*] element in the DOM for the current language
+ *  and refreshes the state-dependent (dynamic) text. */
+function applyLanguage() {
+  const pack = I18N[settings.lang] || I18N.en;
+  document.documentElement.lang =
+    settings.lang === "zh" ? "zh-CN" : settings.lang;
+
+  $$("[data-i18n]").forEach((node) => {
+    node.innerHTML = t(node.dataset.i18n);
+  });
+  $$("[data-i18n-title]").forEach((node) => {
+    node.title = t(node.dataset.i18nTitle);
+  });
+  $$("[data-i18n-aria]").forEach((node) => {
+    node.setAttribute("aria-label", t(node.dataset.i18nAria));
+  });
+  $$("[data-i18n-placeholder]").forEach((node) => {
+    node.placeholder = t(node.dataset.i18nPlaceholder);
+  });
+
+  // State-dependent labels (Start/Stop button, status, bridge badge).
+  const running = session.running || bridge.active;
+  el.startStopLabel.textContent = t(running ? "stop" : "start");
+  el.startStopBtn.setAttribute("aria-label", t(running ? "stop_aria" : "start_aria"));
+  if (session.statusKey && session.statusKey !== "status_idle") {
+    el.statusText.textContent = t(session.statusKey);
+  } else {
+    el.statusText.textContent = t("status_idle");
+  }
+  el.bridgeBadge.textContent = t(bridge.badgeKey || "bridge_offline");
+  updateScript();
+}
 
 /* --------------------------------------------------------------------------
  * Element references
  * ------------------------------------------------------------------------ */
 const el = {
   themeToggle: $("#themeToggle"),
+  langSelect: $("#langSelect"),
   intervalInput: $("#intervalInput"),
   intervalError: $("#intervalError"),
   chips: $$(".chip[data-adjust]"),
@@ -58,9 +570,11 @@ const el = {
   repeatCountInput: $("#repeatCountInput"),
   countError: $("#countError"),
   clickToggle: $("#clickToggle"),
-  clickXInput: $("#clickXInput"),
-  clickYInput: $("#clickYInput"),
+  tabToggle: $("#tabToggle"),
   clickXYError: $("#clickXYError"),
+  targetList: $("#targetList"),
+  addTargetBtn: $("#addTargetBtn"),
+  resetTargetsBtn: $("#resetTargetsBtn"),
   pickBtn: $("#pickBtn"),
   aimOverlay: $("#aimOverlay"),
   aimLabel: $("#aimLabel"),
@@ -102,10 +616,21 @@ function loadSettings() {
     merged.interval = clamp(toInt(merged.interval, DEFAULT_SETTINGS.interval), INTERVAL_MIN, INTERVAL_MAX);
     merged.repeatCount = clamp(toInt(merged.repeatCount, DEFAULT_SETTINGS.repeatCount), COUNT_MIN, COUNT_MAX);
     merged.clickBeforeEnter = Boolean(merged.clickBeforeEnter);
-    merged.clickX = clamp(toInt(merged.clickX, DEFAULT_SETTINGS.clickX), 0, XY_MAX);
-    merged.clickY = clamp(toInt(merged.clickY, DEFAULT_SETTINGS.clickY), 0, XY_MAX);
+    merged.tabBeforeEnter = merged.tabBeforeEnter !== undefined ? Boolean(merged.tabBeforeEnter) : DEFAULT_SETTINGS.tabBeforeEnter;
+    // Target list: lists start empty — only migrate a legacy picked
+    // coordinate (non-zero clickX/clickY) into entry #1.
+    if (Array.isArray(parsed.clickTargets)) {
+      merged.clickTargets = parsed.clickTargets
+        .map((p) => ({ x: clamp(toInt(p && p.x, 0), 0, XY_MAX), y: clamp(toInt(p && p.y, 0), 0, XY_MAX) }))
+        .slice(0, MAX_TARGETS);
+    } else {
+      const legacyX = clamp(toInt(parsed.clickX, 0), 0, XY_MAX);
+      const legacyY = clamp(toInt(parsed.clickY, 0), 0, XY_MAX);
+      merged.clickTargets = legacyX !== 0 || legacyY !== 0 ? [{ x: legacyX, y: legacyY }] : [];
+    }
     if (!["infinite", "custom"].includes(merged.repeatMode)) merged.repeatMode = DEFAULT_SETTINGS.repeatMode;
     if (!["mac", "windows", "linux"].includes(merged.platform)) merged.platform = DEFAULT_SETTINGS.platform;
+    if (!I18N_LANGS.includes(merged.lang)) merged.lang = DEFAULT_SETTINGS.lang;
     return merged;
   } catch {
     return { ...DEFAULT_SETTINGS };
@@ -134,8 +659,11 @@ const session = {
   firedInCycle: 0,   // presses in the current run
   nextFireAt: 0,     // performance.now() timestamp of the next press
   fireTimeoutId: null,
+  stepTimers: [],    // timeouts of the current burst (one per list step)
   uiTimerId: null,
   pressedClassTimer: null,
+  statusKey: "status_idle", // i18n key of the current status line
+  statusClass: "is-idle",
 };
 
 /* Bridge run state — real system-wide presses delivered by bridge.py */
@@ -144,6 +672,7 @@ const bridge = {
   pollId: null,
   lastPresses: 0,
   startedAt: 0,
+  badgeKey: "bridge_offline", // i18n key of the current badge label
 };
 
 /* --------------------------------------------------------------------------
@@ -237,26 +766,50 @@ function renderIdleCountdown() {
 
 /* --------------------------------------------------------------------------
  * Scheduling — drift-free via absolute target timestamps
+ * Each interval runs the WHOLE target list in a burst (one step every
+ * STEP_DELAY_MS), then waits for the next interval. With the list empty,
+ * a burst is a single Tab → Enter step without the click.
  * ------------------------------------------------------------------------ */
-function scheduleNextPress() {
+function cancelStepTimers() {
+  session.stepTimers.forEach((id) => clearTimeout(id));
+  session.stepTimers = [];
+}
+
+function scheduleNextCycle() {
   const delayMs = Math.max(0, session.nextFireAt - performance.now());
   session.fireTimeoutId = setTimeout(onIntervalElapsed, delayMs);
 }
 
 function onIntervalElapsed() {
   if (!session.running) return;
+  runCycle();
+}
 
-  firePress();
+function runCycle() {
+  cancelStepTimers();
 
-  // Honour the custom count (if enabled) before scheduling another press.
-  if (settings.repeatMode === "custom" && session.firedInCycle >= settings.repeatCount) {
-    stopRun("done");
-    return;
+  // Empty list → one plain step (Tab → Enter, no click).
+  const steps = settings.clickTargets.length || 1;
+  for (let i = 0; i < steps; i++) {
+    session.stepTimers.push(setTimeout(() => fireStep(i), i * STEP_DELAY_MS));
   }
 
-  // Advance the target by exactly one interval — clock drift never accumulates.
+  // Next cycle at the next exact interval boundary; never before the
+  // burst finishes, so bursts longer than the interval cannot overlap.
   session.nextFireAt += settings.interval * 1000;
-  scheduleNextPress();
+  session.nextFireAt = Math.max(session.nextFireAt, performance.now() + steps * STEP_DELAY_MS);
+  scheduleNextCycle();
+}
+
+function fireStep(stepIndex) {
+  if (!session.running) return;
+  firePress(stepIndex);
+
+  // Honour the custom count — the burst stops as soon as it is met.
+  if (settings.repeatMode === "custom" && session.firedInCycle >= settings.repeatCount) {
+    cancelStepTimers();
+    stopRun("done");
+  }
 }
 
 /* --------------------------------------------------------------------------
@@ -285,12 +838,26 @@ function bumpCounters() {
   el.cyclePresses.textContent = session.firedInCycle;
 }
 
-/** Describes the current press sequence for log/status messages. */
-function sequenceParts() {
+/** Describes the press sequence for one step (one target entry).
+ *  With the list empty (or the click step off), pressing is Tab → Enter only. */
+function clickStepEnabled() {
+  return settings.clickBeforeEnter && settings.clickTargets.length > 0;
+}
+
+function stepSequence(x, y) {
   const parts = [];
-  if (settings.clickBeforeEnter) parts.push(`Click(${settings.clickX},${settings.clickY})`);
-  parts.push("Enter");
+  if (clickStepEnabled()) parts.push(`${t("seq_click")}(${x},${y})`);
+  if (settings.tabBeforeEnter) parts.push(t("seq_tab"));
+  parts.push(t("seq_enter"));
   return parts.join(" → ");
+}
+
+/** The list-level sequence description used in notes and logs. */
+function sequenceParts() {
+  return stepSequence(
+    settings.clickTargets.length ? settings.clickTargets[0].x : 0,
+    settings.clickTargets.length ? settings.clickTargets[0].y : 0
+  );
 }
 
 /**
@@ -325,12 +892,16 @@ function simulateClick(x, y) {
   }
 }
 
-function firePress() {
+/** Fires one burst step: click at the step's target, then Tab/Enter. */
+function firePress(stepIndex) {
+  const target = settings.clickTargets.length
+    ? settings.clickTargets[stepIndex % settings.clickTargets.length]
+    : null;
   session.presses += 1;
   session.firedInCycle += 1;
 
-  // 1. Per-press sequence: optional click at the target point, then Enter.
-  if (settings.clickBeforeEnter) simulateClick(settings.clickX, settings.clickY);
+  // 1. Optional click at this step's target point.
+  if (target && clickStepEnabled()) simulateClick(target.x, target.y);
 
   // 2. Keycap animation + target-field flash.
   animateKeycap();
@@ -351,7 +922,10 @@ function firePress() {
   playClick();
   bumpCounters();
 
-  addLogEntry(`Press <strong>#${session.presses}</strong> — ${sequenceParts()} dispatched to test target`);
+  addLogEntry(t("press_local", {
+    n: session.presses,
+    seq: target ? stepSequence(target.x, target.y) : stepSequence(0, 0),
+  }));
 }
 
 /* --------------------------------------------------------------------------
@@ -391,7 +965,7 @@ function addLogEntry(html) {
 
 function clearLog() {
   el.log.replaceChildren(el.logEmpty);
-  addSystemLog("Event log cleared");
+  addSystemLog(t("log_cleared"));
 }
 
 function addSystemLog(html) {
@@ -405,8 +979,9 @@ function addSystemLog(html) {
 /* --------------------------------------------------------------------------
  * Local bridge — REAL system-wide presses via the optional bridge.py helper
  * ------------------------------------------------------------------------ */
-function setBridgeBadge(text, cssClass) {
-  el.bridgeBadge.textContent = text;
+function setBridgeBadge(key, cssClass) {
+  bridge.badgeKey = key;
+  el.bridgeBadge.textContent = t(key);
   el.bridgeBadge.classList.remove("is-on", "is-off");
   if (cssClass) el.bridgeBadge.classList.add(cssClass);
 }
@@ -420,9 +995,9 @@ async function probeBridge() {
     data = null;
   }
   if (data && data.ok) {
-    setBridgeBadge(data.running ? "Bridge: pressing" : "Bridge: connected", "is-on");
+    setBridgeBadge(data.running ? "bridge_pressing" : "bridge_connected", "is-on");
   } else {
-    setBridgeBadge("Bridge: offline", "is-off");
+    setBridgeBadge("bridge_offline", "is-off");
   }
   return data;
 }
@@ -434,9 +1009,9 @@ async function bridgeStartRequest() {
     body: JSON.stringify({
       interval: settings.interval,
       count: settings.repeatMode === "custom" ? settings.repeatCount : 0,
-      click: settings.clickBeforeEnter ? 1 : 0,
-      clickX: settings.clickX,
-      clickY: settings.clickY,
+      click: clickStepEnabled() ? 1 : 0,
+      tab: settings.tabBeforeEnter ? 1 : 0,
+      clickList: settings.clickTargets.map((p) => [p.x, p.y]),
     }),
   });
   if (!res.ok) throw new Error(`bridge /start → ${res.status}`);
@@ -476,20 +1051,27 @@ async function bridgePollTick() {
     bridge.active = false;
     stopBridgePoll();
     stopRun("manual");
-    addSystemLog("Bridge connection lost — helper (bridge.py) is not reachable");
-    showToast("Bridge offline — run: python3 bridge.py");
+    addSystemLog(t("bridge_lost_log"));
+    showToast(t("bridge_offline_toast"));
     return;
   }
 
   // Log each press the helper reports since the previous tick.
+  // The helper walks the target list by press index — mirror that here.
   while (bridge.lastPresses < data.presses) {
+    const target = settings.clickTargets.length
+      ? settings.clickTargets[bridge.lastPresses % settings.clickTargets.length]
+      : null;
     bridge.lastPresses += 1;
     session.presses += 1;
     session.firedInCycle += 1;
     animateKeycap();
     playClick();
     bumpCounters();
-    addLogEntry(`Press <strong>#${session.presses}</strong> — ${sequenceParts()} (real events via bridge) sent to the frontmost app`);
+    addLogEntry(t("press_bridge", {
+      n: session.presses,
+      seq: target ? stepSequence(target.x, target.y) : stepSequence(0, 0),
+    }));
   }
 
   // The helper finished a custom-count run on its own.
@@ -501,16 +1083,16 @@ async function bridgePollTick() {
  * ------------------------------------------------------------------------ */
 function modeText() {
   return settings.repeatMode === "custom"
-    ? `stopping after ${settings.repeatCount} presses`
-    : "running infinitely";
+    ? t("mode_custom", { n: settings.repeatCount })
+    : t("mode_infinite");
 }
 
 function setRunUi(isRunning, isReal) {
   el.startStopBtn.classList.toggle("is-running", isRunning);
-  el.startStopLabel.textContent = isRunning ? "Stop" : "Start";
-  el.startStopBtn.setAttribute("aria-label", isRunning ? "Stop pressing Enter" : "Start pressing Enter");
+  el.startStopLabel.textContent = t(isRunning ? "stop" : "start");
+  el.startStopBtn.setAttribute("aria-label", t(isRunning ? "stop_aria" : "start_aria"));
   el.countdownRing.classList.toggle("is-running", isRunning);
-  if (isRunning) setStatus(isReal ? "Running (real keys)" : "Running (local)", "is-running");
+  if (isRunning) setStatus(isReal ? "status_real" : "status_local", "is-running");
 }
 
 function startLocalRun() {
@@ -522,7 +1104,7 @@ function startLocalRun() {
   startUiLoop();
 
   setRunUi(true, false);
-  addSystemLog(`Started (local simulation) — interval <strong>${settings.interval}s</strong>, ${modeText()}`);
+  addSystemLog(t("started_local", { n: settings.interval, mode: modeText() }));
 }
 
 async function startRun() {
@@ -543,11 +1125,11 @@ async function startRun() {
       startBridgePoll();
       startUiLoop();
       setRunUi(true, true);
-      addSystemLog(`Started (REAL keys via bridge) — interval <strong>${settings.interval}s</strong>, ${modeText()}`);
-      showToast("Real pressing started — focus the target app");
+      addSystemLog(t("started_real", { n: settings.interval, mode: modeText() }));
+      showToast(t("real_toast"));
       return;
     } catch {
-      addSystemLog("Bridge rejected start — falling back to local simulation");
+      addSystemLog(t("bridge_rejected_log"));
     }
   }
 
@@ -566,21 +1148,22 @@ function stopRun(reason = "manual") {
   session.running = false;
   clearTimeout(session.fireTimeoutId);
   session.fireTimeoutId = null;
+  cancelStepTimers();
   stopUiLoop();
   renderIdleCountdown();
 
   el.startStopBtn.classList.remove("is-running");
-  el.startStopLabel.textContent = "Start";
-  el.startStopBtn.setAttribute("aria-label", "Start pressing Enter");
+  el.startStopLabel.textContent = t("start");
+  el.startStopBtn.setAttribute("aria-label", t("start_aria"));
   el.countdownRing.classList.remove("is-running");
-  el.countdownLabel.textContent = "until next press";
-  setStatus("Idle", "is-idle");
+  el.countdownLabel.textContent = t("until_next");
+  setStatus("status_idle", "is-idle");
 
   if (reason === "done") {
-    addSystemLog(`Finished — <strong>${settings.repeatCount}</strong> presses completed`);
-    showToast(`Done — ${settings.repeatCount} presses completed`);
+    addSystemLog(t("finished_log", { n: settings.repeatCount }));
+    showToast(t("finished_toast", { n: settings.repeatCount }));
   } else if (reason === "manual") {
-    addSystemLog(wasBridge ? "Stopped — real pressing ended" : "Stopped — reset the countdown or press Start to resume");
+    addSystemLog(wasBridge ? t("stopped_real") : t("stopped_local"));
   }
 
   probeBridge();
@@ -600,12 +1183,14 @@ function resetAll() {
   el.cyclePresses.textContent = "0";
   el.log.replaceChildren(el.logEmpty);
   renderIdleCountdown();
-  addSystemLog("Reset — counters cleared, log emptied");
-  showToast("Reset complete");
+  addSystemLog(t("reset_log"));
+  showToast(t("reset_toast"));
 }
 
-function setStatus(text, cssClass) {
-  el.statusText.textContent = text;
+function setStatus(statusKey, cssClass) {
+  session.statusKey = statusKey;
+  session.statusClass = cssClass || null;
+  el.statusText.textContent = t(statusKey);
   el.statusText.classList.remove("is-running", "is-idle");
   if (cssClass) el.statusText.classList.add(cssClass);
 }
@@ -715,7 +1300,7 @@ async function pickPosition() {
   if (data && data.ok) {
     // Screen-wide overlay — click anywhere on the PC screen.
     aim.blocked = true;
-    showToast("Aim anywhere on the PC screen and left-click to set the target (Esc cancels)", 12000);
+    showToast(t("aim_toast"), 12000);
     try {
       const res = await fetch(`${BRIDGE_URL}/aim`, {
         method: "POST",
@@ -724,14 +1309,12 @@ async function pickPosition() {
       });
       const picked = await res.json();
       if (picked && picked.ok) {
-        el.clickXInput.value = Math.round(picked.x);
-        el.clickYInput.value = Math.round(picked.y);
-        applyClickXYFromInput();
-        showToast(`Click target picked — (${el.clickXInput.value}, ${el.clickYInput.value}) (global screen coordinates)`);
+        const entry = addClickTarget(Math.round(picked.x), Math.round(picked.y));
+        showToast(t("target_added_toast", { n: settings.clickTargets.length, x: entry.x, y: entry.y }));
         return;
       }
       if (picked && picked.reason === "cancelled") {
-        showToast("Picking cancelled — click target unchanged");
+        showToast(t("aim_cancel_toast"));
         return;
       }
       // "unavailable": fall back to in-page aiming below.
@@ -749,10 +1332,10 @@ function startInPageAim() {
 
   let left = AIM_SECONDS;
   document.body.classList.add("is-picking");
-  showAimReticle(window.innerWidth / 2, window.innerHeight / 2, `${left}…`);
-  showToast(`Bridge not available — aim on this page; capture in ${left}s · left-click to capture now · Esc cancels`, AIM_SECONDS * 1000 + 500);
+  showAimReticle(window.innerWidth / 2, window.innerHeight / 2, t("aiming_reticle", { n: left }));
+  showToast(t("inpage_toast", { n: left }), AIM_SECONDS * 1000 + 500);
 
-  aim.onMove = (e) => showAimReticle(e.clientX, e.clientY, `${left}…`);
+  aim.onMove = (e) => showAimReticle(e.clientX, e.clientY, t("aiming_reticle", { n: left }));
   aim.onDown = (e) => {
     if (e.target && e.target.closest && e.target.closest("#pickBtn")) return;
     endAim();
@@ -765,7 +1348,7 @@ function startInPageAim() {
     e.preventDefault();
     e.stopPropagation(); // keep the global Esc → toggle shortcut out
     endAim();
-    showToast("Picking cancelled — click target unchanged");
+    showToast(t("aim_cancel_toast"));
   };
   document.addEventListener("mousemove", aim.onMove, true);
   document.addEventListener("mousedown", aim.onDown, true);
@@ -774,7 +1357,7 @@ function startInPageAim() {
   aim.timerId = setInterval(() => {
     left -= 1;
     if (left > 0) {
-      el.aimLabel.textContent = `${left}…`;
+      el.aimLabel.textContent = t("aiming_reticle", { n: left });
       return;
     }
     endAim();
@@ -811,31 +1394,107 @@ async function setTargetFromPick(ev) {
     const res = await fetch(`${BRIDGE_URL}/pick`, { cache: "no-store" });
     const picked = await res.json();
     if (picked && picked.ok) {
-      el.clickXInput.value = Math.round(picked.x);
-      el.clickYInput.value = Math.round(picked.y);
-      applyClickXYFromInput();
-      showToast(`Click target picked — (${el.clickXInput.value}, ${el.clickYInput.value}) (global screen coordinates)`);
+      const entry = addClickTarget(Math.round(picked.x), Math.round(picked.y));
+      showToast(t("target_added_toast", { n: settings.clickTargets.length, x: entry.x, y: entry.y }));
       return;
     }
   } catch {
     /* fall through */
   }
   if (ev) {
-    el.clickXInput.value = Math.round(ev.clientX);
-    el.clickYInput.value = Math.round(ev.clientY);
-    applyClickXYFromInput();
-    showToast(`Click target picked — (${el.clickXInput.value}, ${el.clickYInput.value}) (page coordinates)`);
+    const entry = addClickTarget(Math.round(ev.clientX), Math.round(ev.clientY));
+    showToast(t("target_added_page_toast", { n: settings.clickTargets.length, x: entry.x, y: entry.y }));
     return;
   }
-  showToast("Bridge offline — aim and left-click on this page to set the target", 5000);
+  showToast(t("pick_nobridge_toast"), 5000);
 }
 
-function applyClickXYFromInput() {
-  const x = Number.parseInt(el.clickXInput.value, 10);
-  const y = Number.parseInt(el.clickYInput.value, 10);
+/* --------------------------------------------------------------------------
+ * Press-target list: each interval fires the whole list as a burst (one
+ * entry every STEP_DELAY_MS), each step performing click(x, y) → Tab →
+ * Enter, in order and wrapping around. Pick appends an entry (max 20);
+ * "Reset list" clears everything until new targets are added.
+ * ------------------------------------------------------------------------ */
+function renderTargetList() {
+  el.targetList.replaceChildren();
+
+  if (settings.clickTargets.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "targets-empty";
+    empty.textContent = t("targets_empty");
+    el.targetList.appendChild(empty);
+    return;
+  }
+
+  settings.clickTargets.forEach((target, index) => {
+    const row = document.createElement("div");
+    row.className = "target-row";
+
+    const label = document.createElement("span");
+    label.className = "target-n";
+    label.textContent = `#${index + 1}`;
+
+    const axisX = document.createElement("span");
+    axisX.className = "xy-axis";
+    axisX.setAttribute("aria-hidden", "true");
+    axisX.textContent = "X";
+
+    const inputX = document.createElement("input");
+    inputX.className = "target-x";
+    inputX.type = "number";
+    inputX.inputMode = "numeric";
+    inputX.min = "0";
+    inputX.max = String(XY_MAX);
+    inputX.step = "1";
+    inputX.value = String(target.x);
+    inputX.autocomplete = "off";
+    inputX.disabled = !settings.clickBeforeEnter;
+
+    const axisY = document.createElement("span");
+    axisY.className = "xy-axis";
+    axisY.setAttribute("aria-hidden", "true");
+    axisY.textContent = "Y";
+
+    const inputY = document.createElement("input");
+    inputY.className = "target-y";
+    inputY.type = "number";
+    inputY.inputMode = "numeric";
+    inputY.min = "0";
+    inputY.max = String(XY_MAX);
+    inputY.step = "1";
+    inputY.value = String(target.y);
+    inputY.autocomplete = "off";
+    inputY.disabled = !settings.clickBeforeEnter;
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "target-remove";
+    removeBtn.innerHTML = "&times;";
+    removeBtn.setAttribute("aria-label", t("target_remove_aria"));
+    removeBtn.title = t("target_remove_aria");
+    removeBtn.disabled = !settings.clickBeforeEnter;
+
+    row.append(label, axisX, inputX, axisY, inputY, removeBtn);
+    el.targetList.appendChild(row);
+  });
+}
+
+function saveClickTargets() {
+  saveSettings();
+  updateScript();
+}
+
+/** Validates + commits a list row's inputs. Returns false if invalid. */
+function applyTargetRowFromInputs(row) {
+  const inputX = row.querySelector(".target-x");
+  const inputY = row.querySelector(".target-y");
+  // Index within .target-row elements only (an empty-state node may exist).
+  const index = Array.from(el.targetList.querySelectorAll(".target-row")).indexOf(row);
+  const x = Number.parseInt(inputX.value, 10);
+  const y = Number.parseInt(inputY.value, 10);
   const invalid =
-    el.clickXInput.value === "" || !Number.isFinite(x) || x < 0 || x > XY_MAX ||
-    el.clickYInput.value === "" || !Number.isFinite(y) || y < 0 || y > XY_MAX;
+    inputX.value === "" || !Number.isFinite(x) || x < 0 || x > XY_MAX ||
+    inputY.value === "" || !Number.isFinite(y) || y < 0 || y > XY_MAX;
 
   if (invalid) {
     showFieldError(el.clickXYError, true);
@@ -843,53 +1502,98 @@ function applyClickXYFromInput() {
   }
 
   showFieldError(el.clickXYError, false);
-  settings.clickX = clamp(x, 0, XY_MAX);
-  settings.clickY = clamp(y, 0, XY_MAX);
-  el.clickXInput.value = settings.clickX;
-  el.clickYInput.value = settings.clickY;
-  saveSettings();
-  updateScript();
+  if (index >= 0) {
+    settings.clickTargets[index] = { x: clamp(x, 0, XY_MAX), y: clamp(y, 0, XY_MAX) };
+    inputX.value = String(settings.clickTargets[index].x);
+    inputY.value = String(settings.clickTargets[index].y);
+    saveClickTargets();
+  }
   return true;
+}
+
+/** Appends a validated + clamped target entry and rerenders the list. */
+function addClickTarget(x, y) {
+  const entry = { x: clamp(Math.round(x) || 0, 0, XY_MAX), y: clamp(Math.round(y) || 0, 0, XY_MAX) };
+  if (settings.clickTargets.length >= MAX_TARGETS) {
+    showToast(t("list_full_toast", { n: MAX_TARGETS }));
+    return settings.clickTargets[settings.clickTargets.length - 1];
+  }
+  settings.clickTargets.push(entry);
+  showFieldError(el.clickXYError, false);
+  renderTargetList();
+  saveClickTargets();
+  return entry;
+}
+
+function removeClickTarget(index) {
+  if (index < 0 || index >= settings.clickTargets.length) return;
+  settings.clickTargets.splice(index, 1);
+  showFieldError(el.clickXYError, false);
+  renderTargetList();
+  saveClickTargets();
+}
+
+/** Clears every target: presses then perform only Tab → Enter. */
+function resetClickTargets() {
+  settings.clickTargets = [];
+  showFieldError(el.clickXYError, false);
+  renderTargetList();
+  saveClickTargets();
+  showToast(t("reset_targets_toast"));
 }
 
 function applyClickEnabled(enabled) {
   settings.clickBeforeEnter = enabled;
   saveSettings();
 
-  // Coordinates are only editable while the click step is enabled.
-  el.clickXInput.disabled = !enabled;
-  el.clickYInput.disabled = !enabled;
+  // Targets are only editable while the click step is enabled
+  // (renderTargetList disables each row's inputs accordingly).
   el.pickBtn.disabled = !enabled;
+  el.addTargetBtn.disabled = !enabled;
+  el.resetTargetsBtn.disabled = !enabled;
   if (!enabled) showFieldError(el.clickXYError, false);
 
+  renderTargetList();
   updateScript();
 }
 
 /* --------------------------------------------------------------------------
  * Cross-platform script generation (macOS / Windows / Linux)
  * ------------------------------------------------------------------------ */
-const PLATFORM_NOTES = {
-  mac: "Accessibility permission REQUIRED — Enable: `open \"x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility\"` → + → add Terminal (GUI only; tccutil cannot grant). Disable: `sudo tccutil reset Accessibility` (revokes for all apps). Then paste the whole block into Terminal and press Enter — presses go to the frontmost app while it runs (Ctrl+C stops). Option 2 is for Script Editor only.",
-  windows: "Accessibility permission: NOT required — SendKeys works out of the box (only run PowerShell as administrator if the target app is elevated, else presses are blocked by UIPI). If synthetic keys get skipped, turn off the Filter Keys accessibility feature: Settings → Accessibility → Keyboard → Filter Keys. Paste this into a PowerShell window — presses go to the frontmost app while it runs (Ctrl+C stops).",
-  linux: "Accessibility permission: NOT required on X11 — xdotool works out of the box (`sudo apt install xdotool`). Wayland (ydotool): Enable: `sudo usermod -aG input $USER` (log out/in) + `sudo systemctl enable --now ydotoold`. Disable: `sudo gpasswd -d $USER input` + `sudo systemctl disable --now ydotoold`. Paste into a shell — presses go to the frontmost app while it runs (Ctrl+C stops).",
-};
-
 function buildAppleScript(interval, mode, count) {
   const stamp = new Date().toLocaleString();
   const header =
     `-- Generated by Enter Key Clicker on ${stamp}\n` +
-    `-- Interval: ${interval}s | Mode: ${mode === "infinite" ? "infinite" : `${count} presses`}\n\n`;
-  const steps =
-    (settings.clickBeforeEnter
-      ? `\t\tclick at {${settings.clickX}, ${settings.clickY}} -- left-click at the target point\n`
+    `-- Interval: ${interval}s | Mode: ${mode === "infinite" ? "infinite" : `${count} presses`}\n` +
+    `-- Sequence: each interval runs the WHOLE list, one entry every 0.2s${settings.tabBeforeEnter ? " (each step: Tab + Enter after the click)" : " (each step: Enter after the click)"}\n\n`;
+
+  // Each cycle walks the whole target list: 0.2s between steps, then the
+  // interval after the final step. An empty list = one plain Tab/Enter step.
+  const clickEnabled = clickStepEnabled();
+  const cycleLen = clickEnabled ? settings.clickTargets.length : 1;
+  const stepLines =
+    (clickEnabled
+      ? `\t\tset pt to item ((n mod (count of targetPoints)) + 1) of targetPoints\n` +
+        `\t\tclick at pt -- left-click at the step's target point\n`
       : "") +
+    (settings.tabBeforeEnter ? `\t\tkey code 48 -- Tab\n` : "") +
     `\t\tkey code 36 -- Enter / Return (keyCode 13)\n`;
   const body =
+    (clickEnabled
+      ? `set targetPoints to {${settings.clickTargets.map((p) => `{${p.x}, ${p.y}}`).join(", ")}}\n`
+      : "") +
+    `set cycleLen to ${cycleLen}\n` +
+    `set n to 0\n` +
     `${mode === "infinite" ? "repeat" : `repeat ${count} times`}\n` +
     `\ttell application "System Events"\n` +
-    steps +
+    stepLines +
     `\tend tell\n` +
-    `\tdelay ${interval}\n` +
+    `\tset n to n + 1\n` +
+    `\tif ((n mod cycleLen) is 0) then\n` +
+    `\t\tdelay ${interval} -- list cycle finished: wait the interval\n` +
+    `\telse\n` +
+    `\t\tdelay 0.2 -- next list step follows shortly\n` +
+    `\tend if\n` +
     `end repeat`;
   return `${header}${body}\n`;
 }
@@ -905,7 +1609,7 @@ function buildScript(platform, interval, mode, count) {
     return buildOsaCommand();
   }
 
-  const clickEnabled = settings.clickBeforeEnter;
+  const clickEnabled = clickStepEnabled();
 
   if (platform === "windows") {
     const comment = header.replace(/^--/gm, "#");
@@ -919,39 +1623,81 @@ function buildScript(platform, interval, mode, count) {
         `    [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);\n` +
         `    [DllImport("user32.dll")] public static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint dwData, UIntPtr dwExtraInfo);\n` +
         `}\n` +
-        `"@\n`;
+        `"@\n` +
+        `# Each interval runs the WHOLE list, one entry every 0.2s (wrapping around)\n` +
+        `$targets = @(\n` +
+        settings.clickTargets.map((p) => `    @(${p.x}, ${p.y})`).join(",\n") +
+        `\n)\n`;
     }
+    const cycleLen = clickEnabled ? settings.clickTargets.length : 1;
 
-    const bodyLines = [];
+    const bodyLines = [
+      "    $count = " + (clickEnabled ? "$targets.Count" : "1"),
+      "    for ($j = 0; $j -lt $count; $j++) {",
+    ];
     if (clickEnabled) {
-      bodyLines.push(`    [MouseTap]::SetCursorPos(${settings.clickX}, ${settings.clickY})`);
-      bodyLines.push("    Start-Sleep -Milliseconds 50");
-      bodyLines.push("    [MouseTap]::mouse_event(2, 0, 0, 0, [UIntPtr]::Zero)  # left button down");
-      bodyLines.push("    Start-Sleep -Milliseconds 50");
-      bodyLines.push("    [MouseTap]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero)  # left button up");
-      bodyLines.push("    Start-Sleep -Milliseconds 50");
+      bodyLines.push(
+        "        $t = $targets[$j % $targets.Count]",
+        "        [MouseTap]::SetCursorPos($t[0], $t[1])",
+        "        Start-Sleep -Milliseconds 50",
+        "        [MouseTap]::mouse_event(2, 0, 0, 0, [UIntPtr]::Zero)  # left button down",
+        "        Start-Sleep -Milliseconds 50",
+        "        [MouseTap]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero)  # left button up",
+        "        Start-Sleep -Milliseconds 50"
+      );
     }
-    bodyLines.push('    [System.Windows.Forms.SendKeys]::SendWait("{ENTER}")');
+    if (settings.tabBeforeEnter) {
+      bodyLines.push('        [System.Windows.Forms.SendKeys]::SendWait("{TAB}")');
+    }
+    bodyLines.push('        [System.Windows.Forms.SendKeys]::SendWait("{ENTER}")');
+    bodyLines.push("        if ($j -lt ($count - 1)) { Start-Sleep -Milliseconds 200 }");
+    bodyLines.push("    }");
 
     const body = bodyLines.join("\n");
+    const gap = [
+      "    # Pause between list cycles; at least 0.2s so bursts can never overlap",
+      `    $gap = [Math]::Max(0.2, ${interval} - ((${cycleLen} - 1) * 0.2))`,
+      "    Start-Sleep -Seconds $gap",
+    ].join("\n") + "\n";
     const loop =
       mode === "infinite"
-        ? `while ($true) {\n${body}\n    Start-Sleep -Seconds ${interval}\n}`
-        : `for ($i = 1; $i -le ${count}; $i++) {\n${body}\n    Start-Sleep -Seconds ${interval}\n}`;
+        ? `while ($true) {\n${body}\n${gap}}`
+        : `for ($i = 1; $i -le ${count}; $i++) {\n${body}\n${gap}}`;
     return `${comment}${prelude}\n${loop}\n`;
   }
 
   // linux — bash + xdotool
   const comment = header.replace(/^--/gm, "#");
-  const stepLines = [];
-  if (clickEnabled) stepLines.push(`  xdotool mousemove ${settings.clickX} ${settings.clickY} click 1`);
-  stepLines.push("  xdotool key Return");
-  const body = stepLines.join("\n");
+  const targetsDecl = clickEnabled
+    ? `# Each interval runs the WHOLE list, one entry every 0.2s (wrapping around)\n` +
+      `tx=(${settings.clickTargets.map((p) => p.x).join(" ")})\n` +
+      `ty=(${settings.clickTargets.map((p) => p.y).join(" ")})\n`
+    : "";
+  const cycleLen = clickEnabled ? settings.clickTargets.length : 1;
+
+  const innerLines = [
+    `  cycle=${clickEnabled ? "${#tx[@]}" : "1"}`,
+    "  for ((j = 0; j < cycle; j++)); do",
+  ];
+  if (clickEnabled) {
+    innerLines.push("    idx=$(( j % ${#tx[@]} ))");
+    innerLines.push("    xdotool mousemove ${tx[$idx]} ${ty[$idx]} click 1");
+  }
+  if (settings.tabBeforeEnter) innerLines.push("    xdotool key Tab");
+  innerLines.push("    xdotool key Return");
+  innerLines.push('    [ "$j" -lt $((cycle - 1)) ] && sleep 0.2');
+  innerLines.push("  done");
+
+  const body = innerLines.join("\n");
+  const gap =
+    `  # Pause between list cycles; at least 0.2s so bursts can never overlap\n` +
+    `  gap=$(awk -v i=${interval} -v c=${cycleLen} 'BEGIN { g = i - (c - 1) * 0.2; print (g < 0.2 ? 0.2 : g) }')\n` +
+    `  sleep "$gap"\n`;
   const loop =
     mode === "infinite"
-      ? `while true; do\n${body}\n  sleep ${interval}\ndone`
-      : `for i in $(seq 1 ${count}); do\n${body}\n  sleep ${interval}\ndone`;
-  return `${comment}${loop}\n`;
+      ? `while true; do\n${body}\n${gap}done`
+      : `for i in $(seq 1 ${count}); do\n${body}\n${gap}done`;
+  return `${comment}${targetsDecl}${loop}\n`;
 }
 
 function updateScript() {
@@ -960,19 +1706,19 @@ function updateScript() {
 
   // Primary block — paste-and-run for Terminal / PowerShell / bash.
   el.scriptCode.textContent = buildScript(platform, interval, repeatMode, repeatCount);
-  el.platformNote.textContent = `${PLATFORM_NOTES[platform]} Sequence per press: ${sequenceParts()}.`;
+  el.platformNote.textContent =
+    `${t(`note_${platform}`)} ${t("seq_prefix")}: ${sequenceParts()} — ${t("targets_count", { n: settings.clickTargets.length })}.`;
 
   if (isMac) {
     // Show the Script Editor flavour as a clearly separated secondary option.
     el.optSecondary.hidden = false;
     el.scriptCode2.textContent = buildAppleScript(interval, repeatMode, repeatCount);
-    el.primaryOptLabel.textContent = "Option 1 — paste this whole block into Terminal, then press Enter";
+    el.primaryOptLabel.textContent = t("primary_mac");
     el.copyOsaBtn.hidden = false;
     el.copyScriptBtn.hidden = true;
   } else {
     el.optSecondary.hidden = true;
-    el.primaryOptLabel.textContent =
-      platform === "windows" ? "Paste this into a PowerShell window" : "Paste this into a Terminal/shell window";
+    el.primaryOptLabel.textContent = t(platform === "windows" ? "primary_windows" : "primary_linux");
     el.copyOsaBtn.hidden = true;
     el.copyScriptBtn.hidden = false;
   }
@@ -985,29 +1731,36 @@ function updateScript() {
  *    hardware HID system, so the event also carries the keyboard's own state.
  *  - kCGHIDEventTap (0): posts at the lowest event tap userland can reach.
  *  - Explicit keydown + 20ms hold + keyup mimics a human key press.
- *  - Optional pre-press steps: left-click at (X, Y) via CGEventCreateMouseEvent
- *    (types 5/1/2 = moved / left-down / left-up) before the Enter keyTap.
+ *  - Optional pre-press steps: left-click at the step's target via
+ *    CGEventCreateMouseEvent (types 5/1/2 = moved / left-down / left-up) and
+ *    optional Tab keyTap (keyCode 48) before the Enter keyTap (keyCode 36).
+ *  - Each press walks the TARGETS list in order, wrapping around.
  */
 function buildOsaCommand() {
   const n = settings.repeatMode === "infinite" ? 0 : settings.repeatCount; // 0 = infinite
   const i = settings.interval;
-  const click = settings.clickBeforeEnter ? 1 : 0;
+  const click = clickStepEnabled() ? 1 : 0;
+  const tab = settings.tabBeforeEnter ? 1 : 0;
+  const targets = JSON.stringify(settings.clickTargets.map((p) => [p.x, p.y]));
   return `osascript -l JavaScript -e '
 ObjC.import("CoreGraphics");
 ObjC.import("Foundation");
-// N = presses (0 = run forever); I = seconds between presses
-// Sequence per press: Click(X, Y) -> Enter (the click step is optional)
+// N = presses (0 = run forever); I = seconds between list cycles
+// TARGETS = [[x, y], ...] — each cycle runs the WHOLE list, one entry
+// every 0.2s; an empty list is a single Tab/Enter step.
+// Sequence per step: Click(x, y)${tab ? " -> Tab" : ""} -> Enter
 var N = ${n}, I = ${i};
-var CLICK = ${click}, X = ${settings.clickX}, Y = ${settings.clickY};
+var CLICK = ${click}, TAB = ${tab};
+var TARGETS = ${targets};
 var src = $.CGEventSourceCreate(1);
-function clickXY() {
-  var mv = $.CGEventCreateMouseEvent(src, 5, {x: X, y: Y}, 0);
+function clickXY(x, y) {
+  var mv = $.CGEventCreateMouseEvent(src, 5, {x: x, y: y}, 0);
   $.CGEventPost(0, mv);
   $.NSThread.sleepForTimeInterval(0.02);
-  var d = $.CGEventCreateMouseEvent(src, 1, {x: X, y: Y}, 0);
+  var d = $.CGEventCreateMouseEvent(src, 1, {x: x, y: y}, 0);
   $.CGEventPost(0, d);
   $.NSThread.sleepForTimeInterval(0.02);
-  var u = $.CGEventCreateMouseEvent(src, 2, {x: X, y: Y}, 0);
+  var u = $.CGEventCreateMouseEvent(src, 2, {x: x, y: y}, 0);
   $.CGEventPost(0, u);
   $.NSThread.sleepForTimeInterval(0.05);
 }
@@ -1018,15 +1771,24 @@ function keyTap(code) {
   var u = $.CGEventCreateKeyboardEvent(src, code, false);
   $.CGEventPost(0, u);
 }
-function press() {
-  if (CLICK === 1) clickXY();
+function press(idx) {
+  var p = TARGETS[idx % TARGETS.length];
+  if (CLICK === 1 && TARGETS.length > 0) clickXY(p[0], p[1]);
+  if (TAB === 1) keyTap(48); // Tab (keyCode 48)
   keyTap(36); // Enter / Return (keyCode 13)
 }
-var i = 0;
-while (N === 0 || i < N) {
-  press();
-  i += 1;
-  if (N === 0 || i < N) $.NSThread.sleepForTimeInterval(I);
+var steps = TARGETS.length > 0 ? TARGETS.length : 1;
+var done = 0;
+while (N === 0 || done < N) {
+  for (var j = 0; j < steps; j++) {
+    if (N !== 0 && done >= N) break;
+    press(TARGETS.length > 0 ? j : 0);
+    done += 1;
+    if (j < steps - 1) $.NSThread.sleepForTimeInterval(0.2);
+  }
+  if (N !== 0 && done >= N) break;
+  var gap = I - (steps - 1) * 0.2;
+  $.NSThread.sleepForTimeInterval(gap > 0.05 ? gap : 0.05);
 }
 "done"'`;
 }
@@ -1044,16 +1806,16 @@ function copyOsaCommand() {
     helper.select();
     try {
       document.execCommand("copy");
-      showToast("Terminal command copied");
+      showToast(t("cmd_copied"));
     } catch {
-      showToast("Copy failed — select the code manually");
+      showToast(t("copy_failed"));
     }
     helper.remove();
   };
 
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(command).then(
-      () => showToast("Terminal command copied"),
+      () => showToast(t("cmd_copied")),
       onFail
     );
   } else {
@@ -1092,7 +1854,7 @@ function showToast(message, duration = 2200) {
 
 function copyScript() {
   const text = el.scriptCode.textContent;
-  const label = { mac: "AppleScript", windows: "PowerShell script", linux: "bash script" }[settings.platform];
+  const label = t({ mac: "label_applescript", windows: "label_powershell", linux: "label_bash" }[settings.platform]);
 
   const onFail = () => {
     // Legacy fallback for browsers without the async Clipboard API.
@@ -1105,16 +1867,16 @@ function copyScript() {
     helper.select();
     try {
       document.execCommand("copy");
-      showToast(`${label} copied to clipboard`);
+      showToast(t("script_copied", { label }));
     } catch {
-      showToast("Copy failed — select the code manually");
+      showToast(t("copy_failed"));
     }
     helper.remove();
   };
 
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text).then(
-      () => showToast(`${label} copied to clipboard`),
+      () => showToast(t("script_copied", { label })),
       onFail
     );
   } else {
@@ -1140,6 +1902,16 @@ function toggleTheme() {
  * Event wiring
  * ------------------------------------------------------------------------ */
 el.themeToggle.addEventListener("click", toggleTheme);
+
+// Language: switching re-translates every static element and refreshes the
+// state-dependent labels (status, bridge badge, Start/Stop, script notes).
+el.langSelect.addEventListener("change", () => {
+  const lang = el.langSelect.value;
+  if (!I18N_LANGS.includes(lang)) return;
+  settings.lang = lang;
+  saveSettings();
+  applyLanguage();
+});
 
 // Start/Stop and Reset are mouse-only controls: blur them after clicking so a
 // real (bridge) Enter landing on the page can never re-activate the focused
@@ -1180,25 +1952,42 @@ el.repeatRadios.forEach((radio) => {
 });
 
 el.clickToggle.addEventListener("change", () => applyClickEnabled(el.clickToggle.checked));
+el.tabToggle.addEventListener("change", () => {
+  settings.tabBeforeEnter = el.tabToggle.checked;
+  saveSettings();
+  updateScript();
+});
 el.pickBtn.addEventListener("click", pickPosition);
+el.addTargetBtn.addEventListener("click", () => addClickTarget(0, 0));
+el.resetTargetsBtn.addEventListener("click", resetClickTargets);
 
-[el.clickXInput, el.clickYInput].forEach((input) => {
-  input.addEventListener("change", applyClickXYFromInput);
-  input.addEventListener("input", () => {
-    const both = [el.clickXInput, el.clickYInput];
-    const invalid = both.some((i) => {
-      const v = Number.parseInt(i.value, 10);
-      return i.value === "" || !Number.isFinite(v) || v < 0 || v > XY_MAX;
-    });
-    showFieldError(el.clickXYError, invalid);
-    if (!invalid) applyClickXYFromInput();
+// Target list rows: value edits validate + save; the × button removes.
+el.targetList.addEventListener("change", (e) => {
+  const row = e.target.closest(".target-row");
+  if (row) applyTargetRowFromInputs(row);
+});
+el.targetList.addEventListener("input", (e) => {
+  if (!e.target.classList.contains("target-x") && !e.target.classList.contains("target-y")) return;
+  const row = e.target.closest(".target-row");
+  const inputs = [row.querySelector(".target-x"), row.querySelector(".target-y")];
+  const invalid = inputs.some((i) => {
+    const v = Number.parseInt(i.value, 10);
+    return i.value === "" || !Number.isFinite(v) || v < 0 || v > XY_MAX;
   });
-  input.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      e.currentTarget.blur();
-    }
-  });
+  showFieldError(el.clickXYError, invalid);
+});
+el.targetList.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter") return;
+  if (!e.target.classList.contains("target-x") && !e.target.classList.contains("target-y")) return;
+  e.preventDefault();
+  e.target.blur();
+});
+el.targetList.addEventListener("click", (e) => {
+  const removeBtn = e.target.closest(".target-remove");
+  if (!removeBtn) return;
+  removeClickTarget(
+    Array.from(el.targetList.querySelectorAll(".target-row")).indexOf(removeBtn.closest(".target-row"))
+  );
 });
 
 el.repeatCountInput.addEventListener("change", applyRepeatCountFromInput);
@@ -1223,11 +2012,11 @@ el.copyScript2Btn.addEventListener("click", () => {
   const text = el.scriptCode2.textContent;
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text).then(
-      () => showToast("AppleScript copied — open Script Editor and paste"),
-      () => showToast("Copy failed — select the code manually")
+      () => showToast(t("applescript_copied")),
+      () => showToast(t("copy_failed"))
     );
   } else {
-    showToast("Copy failed — select the code manually");
+    showToast(t("copy_failed"));
   }
 });
 
@@ -1267,6 +2056,8 @@ window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", (e
  * ------------------------------------------------------------------------ */
 function init() {
   applyTheme(settings.theme);
+  el.langSelect.value = settings.lang;
+  applyLanguage();
   probeBridge();
 
   // Interval + repeat controls
@@ -1278,20 +2069,20 @@ function init() {
     el.repeatCountInput.disabled = settings.repeatMode !== "custom";
   }
 
-  // Sound + sequence + platform
+  // Sound + sequence + targets + platform
   el.soundToggle.checked = settings.sound;
   el.clickToggle.checked = settings.clickBeforeEnter;
-  el.clickXInput.value = settings.clickX;
-  el.clickYInput.value = settings.clickY;
-  el.clickXInput.disabled = !settings.clickBeforeEnter;
-  el.clickYInput.disabled = !settings.clickBeforeEnter;
+  el.tabToggle.checked = settings.tabBeforeEnter;
   el.pickBtn.disabled = !settings.clickBeforeEnter;
+  el.addTargetBtn.disabled = !settings.clickBeforeEnter;
+  el.resetTargetsBtn.disabled = !settings.clickBeforeEnter;
+  renderTargetList();
   selectPlatform(settings.platform);
   updateScript();
 
   // Idle countdown preview
   renderIdleCountdown();
-  setStatus("Idle", "is-idle");
+  setStatus("status_idle", "is-idle");
   el.totalPresses.textContent = "0";
   el.cyclePresses.textContent = "0";
 }

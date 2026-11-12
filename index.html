@@ -18,7 +18,7 @@
   </script>
 
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236366f1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='2' y='5' width='20' height='14' rx='3'/%3E%3Cpath d='M8 10v1.5a2 2 0 0 0 2 2h6'/%3E%3Cpath d='m13.5 11 2.5 2.5-2.5 2.5'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="style.css?v=6">
+  <link rel="stylesheet" href="style.css?v=9">
 </head>
 <body>
 
@@ -33,19 +33,35 @@
       </span>
       <div class="brand-text">
         <h1>Enter Key Clicker</h1>
-        <p class="tagline">Automated <kbd>&#9166;</kbd> press simulator &amp; macOS script generator</p>
+        <p class="tagline" data-i18n="tagline">Automated <kbd>&#9166;</kbd> press simulator &amp; macOS script generator</p>
       </div>
     </div>
 
-    <button id="themeToggle" class="icon-btn" type="button" aria-label="Toggle light/dark theme" title="Toggle theme">
-      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <circle cx="12" cy="12" r="4"></circle>
-        <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
-      </svg>
-      <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-      </svg>
-    </button>
+    <div class="header-controls">
+      <div class="lang-wrap">
+        <svg class="lang-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M2 12h20"></path>
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+        </svg>
+        <select id="langSelect" class="lang-select" data-i18n-aria="lang_aria" aria-label="Language">
+          <option value="en" selected>English</option>
+          <option value="my">မြန်မာ</option>
+          <option value="zh">中文</option>
+          <option value="ko">한국어</option>
+        </select>
+      </div>
+
+      <button id="themeToggle" class="icon-btn" type="button" aria-label="Toggle light/dark theme" title="Toggle theme">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="4"></circle>
+          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+        </svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+      </button>
+    </div>
   </header>
 
   <main class="layout">
@@ -53,16 +69,16 @@
     <!-- ============ Controls ============ -->
     <section class="card card-controls" aria-labelledby="controls-heading">
       <div class="card-head-row">
-        <h2 id="controls-heading">Controls</h2>
-        <span id="bridgeBadge" class="bridge-badge" title="Run `python3 bridge.py` in this folder (or double-click start-bridge.command) so the Start button presses real Enter in the frontmost app. macOS must also allow it: System Settings → Privacy & Security → Accessibility → add the app running the bridge">Bridge: checking…</span>
+        <h2 id="controls-heading" data-i18n="controls">Controls</h2>
+        <span id="bridgeBadge" class="bridge-badge" data-i18n-title="bridge_badge_title" title="Run `python3 bridge.py` in this folder (or double-click start-bridge.command) so the Start button presses real Enter in the frontmost app. macOS must also allow it: System Settings → Privacy & Security → Accessibility → add the app running the bridge">Bridge: checking…</span>
       </div>
 
       <div class="countdown-panel">
         <div class="countdown-ring" id="countdownRing">
-          <span id="countdown" class="countdown-value">5</span>
+          <span id="countdown" class="countdown-value">10</span>
           <span class="countdown-unit">s</span>
         </div>
-        <p class="countdown-label" id="countdownLabel">until next press</p>
+        <p class="countdown-label" id="countdownLabel" data-i18n="until_next">until next press</p>
       </div>
 
       <div class="progress-track" aria-hidden="true">
@@ -70,72 +86,80 @@
       </div>
 
       <div class="field">
-        <label for="intervalInput">Interval (seconds, 5–9999)</label>
-        <div class="stepper" role="group" aria-label="Quick adjust interval">
-          <button type="button" class="chip" data-adjust="-1" aria-label="Decrease interval by 1 second">&minus;1s</button>
-          <input id="intervalInput" name="interval" type="number" inputmode="numeric" min="5" max="9999" step="1" value="5" autocomplete="off">
-          <button type="button" class="chip" data-adjust="1" aria-label="Increase interval by 1 second">+1s</button>
-          <button type="button" class="chip" data-adjust="10" aria-label="Increase interval by 10 seconds">+10s</button>
-          <button type="button" class="chip" data-adjust="60" aria-label="Increase interval by 60 seconds">+60s</button>
+        <label for="intervalInput" data-i18n="interval_label">Interval (seconds, 10–9999)</label>
+        <div class="stepper" role="group" data-i18n-aria="stepper_aria" aria-label="Quick adjust interval">
+          <button type="button" class="chip" data-adjust="-1" data-i18n-aria="chip_m1" aria-label="Decrease interval by 1 second">&minus;1s</button>
+          <input id="intervalInput" name="interval" type="number" inputmode="numeric" min="10" max="9999" step="1" value="10" autocomplete="off">
+          <button type="button" class="chip" data-adjust="1" data-i18n-aria="chip_p1" aria-label="Increase interval by 1 second">+1s</button>
+          <button type="button" class="chip" data-adjust="10" data-i18n-aria="chip_p10" aria-label="Increase interval by 10 seconds">+10s</button>
+          <button type="button" class="chip" data-adjust="60" data-i18n-aria="chip_p60" aria-label="Increase interval by 60 seconds">+60s</button>
         </div>
-        <p class="field-error" id="intervalError" role="alert" hidden>Interval must be between 5 and 9999 seconds.</p>
+        <p class="field-error" id="intervalError" role="alert" hidden data-i18n="interval_error">Interval must be between 10 and 9999 seconds.</p>
       </div>
 
       <fieldset class="fieldset">
-        <legend>Press sequence</legend>
+        <legend data-i18n="seq_legend">Press sequence</legend>
 
         <label class="switch-row switch-row-seq" for="clickToggle">
           <input id="clickToggle" type="checkbox">
           <span class="switch" aria-hidden="true"></span>
           <span class="switch-text">
-            <span class="radio-title">Mouse left-click first</span>
-            <span class="radio-hint">Tap the target screen coordinates before each press</span>
+            <span class="radio-title" data-i18n="click_title">Mouse left-click first</span>
+            <span class="radio-hint" data-i18n="click_hint">Tap each step's target screen coordinates before Tab/Enter</span>
           </span>
         </label>
 
-        <div class="field field-xy" id="clickXYField">
-          <label for="clickXInput">Click target (screen coordinates)</label>
-          <div class="xy-row">
-            <span class="xy-axis" aria-hidden="true">X</span>
-            <input id="clickXInput" name="clickX" type="number" inputmode="numeric" min="0" max="99999" step="1" value="0" autocomplete="off">
-            <span class="xy-axis" aria-hidden="true">Y</span>
-            <input id="clickYInput" name="clickY" type="number" inputmode="numeric" min="0" max="99999" step="1" value="0" autocomplete="off">
-            <button id="pickBtn" type="button" class="btn btn-ghost btn-small" title="The bridge dims the whole PC screen with a crosshair overlay — click anywhere on the screen to set the target (Esc cancels). Without the bridge, an in-page reticle captures the cursor position after a short countdown.">
+        <label class="switch-row switch-row-seq" for="tabToggle">
+          <input id="tabToggle" type="checkbox" checked>
+          <span class="switch" aria-hidden="true"></span>
+          <span class="switch-text">
+            <span class="radio-title" data-i18n="tab_title">Press Tab before Enter</span>
+            <span class="radio-hint" data-i18n="tab_hint">Moves focus to the next field before each Enter press</span>
+          </span>
+        </label>
+
+        <div class="field field-targets" id="clickXYField">
+          <label for="targetList" data-i18n="targets_label">Press targets</label>
+          <div id="targetList" class="target-list"></div>
+          <div class="targets-actions">
+            <button id="addTargetBtn" type="button" class="btn btn-ghost btn-small" data-i18n="add_target">Add target manually</button>
+            <button id="pickBtn" type="button" class="btn btn-ghost btn-small" data-i18n-title="pick_title" title="Adds a new target to the list: the bridge dims the whole PC screen with a crosshair overlay — click anywhere on the screen to add the target (Esc cancels). Without the bridge, an in-page reticle captures the cursor position after a short countdown.">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M5 3l14 8-6.5 1.5L9 19z"></path>
               </svg>
               Pick
             </button>
+            <button id="resetTargetsBtn" type="button" class="btn btn-ghost btn-small" data-i18n="reset_targets">Reset list</button>
           </div>
-          <p class="xy-hint">Press <strong>Pick</strong> to target anywhere on the PC screen: with the bridge running, the whole screen is dimmed and a crosshair follows the cursor &mdash; <strong>left-click anywhere on the screen</strong> to set the target (Esc cancels). Without the bridge, an in-page reticle captures the cursor position after a short countdown.</p>
-          <p class="field-error" id="clickXYError" role="alert" hidden>Coordinates must be whole numbers between 0 and 99999.</p>
+          <p class="xy-hint" data-i18n="targets_hint">Every interval fires the whole list as a burst, one entry every 0.2 seconds, wrapping around: <strong>click &rarr; tab &rarr; enter</strong>. <strong>Pick</strong> adds a target (up to 20); <strong>Reset list</strong> clears everything until new targets are added.</p>
+          <p class="field-error" id="clickXYError" role="alert" hidden data-i18n="targets_error">All coordinates must be whole numbers between 0 and 99999.</p>
         </div>
 
       </fieldset>
 
       <fieldset class="fieldset">
-        <legend>Repeat mode</legend>
+        <legend data-i18n="repeat_legend">Repeat mode</legend>
 
         <label class="radio-row">
           <input type="radio" name="repeatMode" value="infinite" checked>
           <span class="radio-text">
-            <span class="radio-title">Run infinitely</span>
-            <span class="radio-hint">Press forever until stopped</span>
+            <span class="radio-title" data-i18n="inf_title">Run infinitely</span>
+            <span class="radio-hint" data-i18n="inf_hint">Press forever until stopped</span>
           </span>
         </label>
 
         <label class="radio-row">
           <input type="radio" name="repeatMode" value="custom">
           <span class="radio-text">
-            <span class="radio-title">Stop after custom count</span>
-            <span class="radio-hint">Run a fixed number of presses (1–9999)</span>
+            <span class="radio-title" data-i18n="custom_title">Stop after custom count</span>
+            <span class="radio-hint" data-i18n="custom_hint">Run a fixed number of presses (1–9999)</span>
           </span>
         </label>
 
         <div class="field field-count" id="countField">
-          <label for="repeatCountInput">Number of presses</label>
+          <label for="repeatCountInput" data-i18n="count_label">Number of presses</label>
           <input id="repeatCountInput" name="repeatCount" type="number" inputmode="numeric" min="1" max="9999" step="1" value="10" autocomplete="off">
-          <p class="field-error" id="countError" role="alert" hidden>Count must be between 1 and 9999.</p>
+          <p class="field-error" id="countError" role="alert" hidden data-i18n="count_error">Count must be between 1 and 9999.</p>
         </div>
       </fieldset>
 
@@ -150,18 +174,18 @@
             <path d="M3 12a9 9 0 1 0 2.64-6.36"></path>
             <path d="M3 4v5h5"></path>
           </svg>
-          Reset
+          <span data-i18n="reset">Reset</span>
         </button>
-        <span class="shortcut-hint">Toggle with <kbd>Space</kbd> / <kbd>Esc</kbd></span>
+        <span class="shortcut-hint" data-i18n="shortcut_hint">Toggle with <kbd>Space</kbd> / <kbd>Esc</kbd></span>
       </div>
 
       <dl class="stats">
         <div class="stat">
-          <dt>Presses this run</dt>
+          <dt data-i18n="stats_cycle">Presses this run</dt>
           <dd id="cyclePresses">0</dd>
         </div>
         <div class="stat">
-          <dt>Status</dt>
+          <dt data-i18n="stats_status">Status</dt>
           <dd id="statusText">Idle</dd>
         </div>
       </dl>
@@ -169,7 +193,7 @@
 
     <!-- ============ Test Target ============ -->
     <section class="card card-target" aria-labelledby="target-heading">
-      <h2 id="target-heading">Test Target</h2>
+      <h2 id="target-heading" data-i18n="target_heading">Test Target</h2>
 
       <div class="target-stage">
         <div class="keycap" id="keycap" aria-hidden="true">
@@ -180,39 +204,39 @@
 
         <div class="big-counter">
           <span id="totalPresses" class="big-counter-value" aria-live="polite">0</span>
-          <span class="big-counter-label">Total presses</span>
+          <span class="big-counter-label" data-i18n="total_label">Total presses</span>
         </div>
       </div>
 
       <form id="targetForm" autocomplete="off">
-        <label class="field-label" for="targetInput">Target field</label>
-        <input id="targetInput" type="text" placeholder="Focus here — every simulated Enter fires on this field" spellcheck="false">
+        <label class="field-label" for="targetInput" data-i18n="target_label">Target field</label>
+        <input id="targetInput" type="text" data-i18n-placeholder="target_ph" placeholder="Focus here — every simulated Enter fires on this field" spellcheck="false">
       </form>
 
       <label class="switch-row" for="soundToggle">
         <input id="soundToggle" type="checkbox" checked>
         <span class="switch" aria-hidden="true"></span>
-        <span class="switch-text">Click sound (Web Audio)</span>
+        <span class="switch-text" data-i18n="sound_label">Click sound (Web Audio)</span>
       </label>
     </section>
 
     <!-- ============ Event Log ============ -->
     <section class="card card-log" aria-labelledby="log-heading">
       <div class="card-head-row">
-        <h2 id="log-heading">Event Log</h2>
-        <button id="clearLogBtn" type="button" class="btn btn-ghost btn-small">Clear</button>
+        <h2 id="log-heading" data-i18n="log_heading">Event Log</h2>
+        <button id="clearLogBtn" type="button" class="btn btn-ghost btn-small"><span data-i18n="clear_log">Clear</span></button>
       </div>
-      <div id="log" class="log" role="log" aria-live="polite" aria-label="Simulated Enter press log" tabindex="0">
-        <p class="log-empty" id="logEmpty">No presses yet — hit Start to begin.</p>
+      <div id="log" class="log" role="log" aria-live="polite" data-i18n-aria="log_aria" aria-label="Simulated Enter press log" tabindex="0">
+        <p class="log-empty" id="logEmpty" data-i18n="log_empty">No presses yet — hit Start to begin.</p>
       </div>
     </section>
 
     <!-- ============ Cross-platform Script Generators ============ -->
     <section class="card card-script" aria-labelledby="script-heading">
-      <h2 id="script-heading">System-wide Script Generator</h2>
-      <p class="script-desc">Send a real <kbd>&#9166;</kbd> in any desktop app. Each snippet updates live to match your interval and repeat mode. Pick your platform:</p>
+      <h2 id="script-heading" data-i18n="script_heading">System-wide Script Generator</h2>
+      <p class="script-desc" data-i18n="script_desc">Send a real <kbd>&#9166;</kbd> in any desktop app. Each snippet updates live to match your interval and repeat mode. Pick your platform:</p>
 
-      <div class="platform-tabs" role="tablist" aria-label="Target platform">
+      <div class="platform-tabs" role="tablist" data-i18n-aria="tabs_aria" aria-label="Target platform">
         <button id="tab-mac" class="platform-tab is-active" type="button" role="tab" aria-selected="true" aria-controls="scriptPanel" data-platform="mac">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M16 3a5 5 0 0 1-4 8 4 4 0 1 0-3 7h10a4 4 0 0 0 0-8h-1V8"></path>
@@ -245,14 +269,14 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="m4 17 5-5-5-5"></path><path d="m12 19 7-7-7-7"></path>
               </svg>
-              Copy Terminal command
+              <span data-i18n="copy_terminal">Copy Terminal command</span>
             </button>
             <button id="copyScriptBtn" type="button" class="btn btn-secondary btn-small" aria-label="Copy script to clipboard">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <rect x="9" y="9" width="12" height="12" rx="2"></rect>
                 <path d="M5 15V5a2 2 0 0 1 2-2h10"></path>
               </svg>
-              Copy script
+              <span data-i18n="copy_script">Copy script</span>
             </button>
           </div>
         </div>
@@ -261,13 +285,13 @@
 
       <div class="script-opt" id="optSecondary" hidden>
         <div class="script-opt-head">
-          <h3>AppleScript &mdash; for the Script Editor app only (do NOT paste this into Terminal)</h3>
+          <h3 data-i18n="secondary_heading">AppleScript &mdash; for the Script Editor app only (do NOT paste this into Terminal)</h3>
           <button id="copyScript2Btn" type="button" class="btn btn-secondary btn-small">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <rect x="9" y="9" width="12" height="12" rx="2"></rect>
               <path d="M5 15V5a2 2 0 0 1 2-2h10"></path>
             </svg>
-            Copy AppleScript
+            <span data-i18n="copy_applescript">Copy AppleScript</span>
           </button>
         </div>
         <pre class="script-block" tabindex="0"><code id="scriptCode2"></code></pre>
@@ -277,7 +301,7 @@
   </main>
 
   <footer class="app-footer">
-    <p>Browser sandboxes cannot press keys in other apps — use the scripts above for system-wide automation. macOS requires <strong>Accessibility permission</strong> (System Settings → Privacy &amp; Security → Accessibility) for the app running the presses, or the keys are silently dropped; Windows and Linux need none for the scripts above. Settings are saved locally in your browser.</p>
+    <p data-i18n="footer_text">Browser sandboxes cannot press keys in other apps — use the scripts above for system-wide automation. macOS requires <strong>Accessibility permission</strong> (System Settings → Privacy &amp; Security → Accessibility) for the app running the presses, or the keys are silently dropped; Windows and Linux need none for the scripts above. Settings are saved locally in your browser.</p>
   </footer>
 
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
@@ -288,6 +312,6 @@
     <span class="aim-label" id="aimLabel">5…</span>
   </div>
 
-  <script src="script.js?v=6"></script>
+  <script src="script.js?v=9"></script>
 </body>
 </html>

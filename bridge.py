@@ -17,8 +17,10 @@ Endpoints:
   POST /aim     {"timeout": 1-60} -> full-screen aim overlay; {"ok":true,"x":int,"y":int}
                  on click, {"ok":false,"reason":"cancelled"} on Esc/timeout,
                  {"ok":false,"reason":"unavailable"} when no GUI is possible
-  POST /start   {"interval": 5-9999, "count": 0 (infinite) | 1-9999,
-                 "click": 0|1, "clickX": 0-99999, "clickY": 0-99999}
+  POST /start   {"interval": 10-9999, "count": 0 (infinite) | 1-9999,
+                 "click": 0|1, "tab": 0|1,
+                 "clickList": [[x, y], ...] (0-20 entries, each 0-99999)
+                 — each interval fires the whole list 0.2s apart}
   POST /stop    -> stops any running press loop
 """
 import json
@@ -31,29 +33,34 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 HOST = "127.0.0.1"
 PORT = 8791
-INTERVAL_MIN, INTERVAL_MAX = 5, 9999
+INTERVAL_MIN, INTERVAL_MAX = 10, 9999
 COUNT_MAX = 9999
 XY_MAX = 99999
+MAX_TARGETS = 20
 AIM_TIMEOUT_MAX = 60
 
 # Same loop as the "Copy Terminal command" feature: keydown + 20 ms hold +
 # keyup, posted at the HID event tap from an HID-system event source.
-# Sequence per press: Click(X, Y) -> Enter (the click step is optional).
-# __N__ = presses (0 = run forever), __I__ = seconds between presses,
-# __CE__ = click enabled (0/1), __CX__/__CY__ = click target coordinates.
+# Each interval fires the WHOLE target list as a burst, one entry every 0.2s
+# (each step: Click(x, y) -> Tab (optional) -> Enter), then waits so the next
+# burst starts one interval after the previous one.
+# __N__ = presses (0 = run forever), __I__ = seconds between bursts,
+# __CE__ = click enabled (0/1), __CT__ = Tab enabled (0/1),
+# __TARGETS__ = JSON array literal like [[100, 200], [3, 4]].
 JXA_TEMPLATE = """ObjC.import("CoreGraphics");
 ObjC.import("Foundation");
 var N = __N__, I = __I__;
-var CLICK = __CE__, X = __CX__, Y = __CY__;
+var CLICK = __CE__, TAB = __CT__;
+var TARGETS = __TARGETS__;
 var src = $.CGEventSourceCreate(1);
-function clickXY() {
-  var mv = $.CGEventCreateMouseEvent(src, 5, {x: X, y: Y}, 0);
+function clickXY(x, y) {
+  var mv = $.CGEventCreateMouseEvent(src, 5, {x: x, y: y}, 0);
   $.CGEventPost(0, mv);
   $.NSThread.sleepForTimeInterval(0.02);
-  var d = $.CGEventCreateMouseEvent(src, 1, {x: X, y: Y}, 0);
+  var d = $.CGEventCreateMouseEvent(src, 1, {x: x, y: y}, 0);
   $.CGEventPost(0, d);
   $.NSThread.sleepForTimeInterval(0.02);
-  var u = $.CGEventCreateMouseEvent(src, 2, {x: X, y: Y}, 0);
+  var u = $.CGEventCreateMouseEvent(src, 2, {x: x, y: y}, 0);
   $.CGEventPost(0, u);
   $.NSThread.sleepForTimeInterval(0.05);
 }
@@ -64,15 +71,24 @@ function keyTap(code) {
   var u = $.CGEventCreateKeyboardEvent(src, code, false);
   $.CGEventPost(0, u);
 }
-function press() {
-  if (CLICK === 1) clickXY();
+function press(idx) {
+  var p = TARGETS[idx % TARGETS.length];
+  if (CLICK === 1 && TARGETS.length > 0) clickXY(p[0], p[1]);
+  if (TAB === 1) keyTap(48); // Tab (keyCode 48)
   keyTap(36); // Enter / Return (keyCode 13)
 }
-var i = 0;
-while (N === 0 || i < N) {
-  press();
-  i += 1;
-  if (N === 0 || i < N) $.NSThread.sleepForTimeInterval(I);
+var steps = TARGETS.length > 0 ? TARGETS.length : 1;
+var done = 0;
+while (N === 0 || done < N) {
+  for (var j = 0; j < steps; j++) {
+    if (N !== 0 && done >= N) break;
+    press(TARGETS.length > 0 ? j : 0);
+    done += 1;
+    if (j < steps - 1) $.NSThread.sleepForTimeInterval(0.2);
+  }
+  if (N !== 0 && done >= N) break;
+  var gap = I - (steps - 1) * 0.2;
+  $.NSThread.sleepForTimeInterval(gap > 0.05 ? gap : 0.05);
 }
 "done\""""
 
@@ -89,6 +105,7 @@ class Bridge:
         self.proc = None
         self.interval = 0
         self.count = 0
+        self.step_count = 1
         self.started_at = 0.0
         # RLock: start()/stop() report their result via status() while still
         # holding the lock — a plain Lock would deadlock there.
@@ -99,9 +116,15 @@ class Bridge:
             running = self.proc is not None and self.proc.poll() is None
             presses = 0
             if running and self.interval > 0:
-                # First press fires immediately at t=0, then one per interval.
+                # Burst mode: each interval fires step_count presses 0.2s
+                # apart, then waits out the rest of the interval.
+                period = max(self.interval, self.step_count * 0.2)
                 elapsed = time.time() - self.started_at
-                presses = 1 + int(elapsed // self.interval)
+                cycles = elapsed // period
+                cycle_elapsed = elapsed - cycles * period
+                done = int(cycles) * self.step_count
+                done += min(self.step_count, 1 + int(cycle_elapsed // 0.2))
+                presses = int(done)
                 if self.count > 0:
                     presses = min(presses, self.count)
             return {
@@ -112,7 +135,7 @@ class Bridge:
                 "presses": presses,
             }
 
-    def start(self, interval, count, click, click_x, click_y):
+    def start(self, interval, count, click, tab, targets):
         with self.lock:
             self._stop_locked()
             script = (
@@ -120,11 +143,12 @@ class Bridge:
                 .replace("__N__", str(count))
                 .replace("__I__", str(interval))
                 .replace("__CE__", str(click))
-                .replace("__CX__", str(click_x))
-                .replace("__CY__", str(click_y))
+                .replace("__CT__", str(tab))
+                .replace("__TARGETS__", json.dumps(targets))
             )
             self.interval = interval
             self.count = count
+            self.step_count = len(targets) if click and targets else 1
             self.started_at = time.time()
             self.proc = subprocess.Popen(
                 ["osascript", "-l", "JavaScript", "-e", script],
@@ -348,11 +372,41 @@ class Handler(BaseHTTPRequestHandler):
             interval = int(body.get("interval", 0))
             count = int(body.get("count", 0))
             click = int(body.get("click", 0))
-            click_x = int(body.get("clickX", 0))
-            click_y = int(body.get("clickY", 0))
+            tab = int(body.get("tab", 0))
         except (TypeError, ValueError):
             self._json(400, {"ok": False, "error": "parameters must be integers"})
             return
+
+        # Target list: fired as a burst each interval, 0.2s between entries.
+        # Falls back to the legacy single clickX/clickY pair when clickList
+        # is not supplied.
+        raw_list = body.get("clickList")
+        if raw_list is None:
+            try:
+                legacy_x = int(body.get("clickX", 0))
+                legacy_y = int(body.get("clickY", 0))
+            except (TypeError, ValueError):
+                self._json(400, {"ok": False, "error": "parameters must be integers"})
+                return
+            raw_list = [[legacy_x, legacy_y]]
+        if not isinstance(raw_list, list) or len(raw_list) > MAX_TARGETS:
+            self._json(400, {"ok": False, "error": "clickList must hold 0-%d [x, y] entries" % MAX_TARGETS})
+            return
+        targets = []
+        for entry in raw_list:
+            if not isinstance(entry, (list, tuple)) or len(entry) != 2:
+                self._json(400, {"ok": False, "error": "clickList entries must be [x, y] pairs"})
+                return
+            try:
+                x, y = int(entry[0]), int(entry[1])
+            except (TypeError, ValueError):
+                self._json(400, {"ok": False, "error": "click coordinates must be integers"})
+                return
+            if not (0 <= x <= XY_MAX and 0 <= y <= XY_MAX):
+                self._json(400, {"ok": False, "error": "click coordinates out of range"})
+                return
+            targets.append([x, y])
+
         if not (INTERVAL_MIN <= interval <= INTERVAL_MAX):
             self._json(400, {"ok": False, "error": "interval out of range"})
             return
@@ -362,10 +416,10 @@ class Handler(BaseHTTPRequestHandler):
         if click not in (0, 1):
             self._json(400, {"ok": False, "error": "click must be 0 or 1"})
             return
-        if not (0 <= click_x <= XY_MAX and 0 <= click_y <= XY_MAX):
-            self._json(400, {"ok": False, "error": "click coordinates out of range"})
+        if tab not in (0, 1):
+            self._json(400, {"ok": False, "error": "tab must be 0 or 1"})
             return
-        self._json(200, bridge.start(interval, count, click, click_x, click_y))
+        self._json(200, bridge.start(interval, count, click, tab, targets))
 
     def log_message(self, *args):  # keep the helper window quiet
         pass
