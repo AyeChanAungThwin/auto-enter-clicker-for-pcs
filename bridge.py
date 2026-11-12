@@ -13,6 +13,9 @@ platform scripts use:
 Run:            python3 bridge.py
                 (keep the window open — Ctrl+C or close the window to stop)
 Auto-start:     macOS ./start-bridge.command — Windows double-click start-bridge.bat
+Launcher:       every run (re)registers the enterclickerbridge:// URL scheme,
+                so the web page can start this helper itself — the "Start
+                bridge" button / its on-load attempt — after it went offline.
 
 Endpoints:
   GET  /ping    -> {"ok":true,"running":bool,"presses":int,"interval":int,"count":int}
@@ -30,6 +33,7 @@ Endpoints:
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -432,6 +436,57 @@ def run_aim_overlay(timeout):
 aim_overlay = AimOverlay()
 
 
+# ---------------------------------------------------------------------------
+# One-click launcher registration (WINDOWS ONLY) — each time bridge.py runs
+# it registers the enterclickerbridge:// URL protocol handler in HKCU, so the
+# web app's "Start bridge" button (and its automatic attempt on page load)
+# can relaunch the helper later. The launch routes through start-bridge.bat,
+# so pressing the button looks exactly like double-clicking it: a visible
+# console window. Other platforms: no registration — the bridge is started
+# manually there (start-bridge.command / python3 bridge.py).
+# ---------------------------------------------------------------------------
+
+BRIDGE_URL_SCHEME = "enterclickerbridge"
+
+
+def _windows_console_launcher():
+    launcher = os.path.join(os.path.dirname(sys.executable), "pythonw.exe")
+    return launcher if os.path.exists(launcher) else sys.executable
+
+
+def _register_launcher_windows():
+    import winreg
+    key_path = r"Software\Classes\%s" % BRIDGE_URL_SCHEME
+    bat = os.path.join(os.path.dirname(os.path.abspath(__file__)), "start-bridge.bat")
+    if os.path.exists(bat):
+        # Route the launch through the user's own start-bridge.bat -> a
+        # visible console window, exactly like double-clicking it. cmd /c
+        # strips the FIRST and LAST quote of the line, so the URL argument
+        # that browsers append would end up unterminated — the doubled
+        # outer quotes compensate for that (the documented handler trick).
+        command = 'cmd.exe /c ""%s" "%%1""' % bat
+    else:
+        command = '"%s" "%s" "%%1"' % (
+            _windows_console_launcher(),
+            os.path.abspath(__file__),
+        )
+    with winreg.CreateKey(winreg.HKEY_CURRENT_USER, key_path) as key:
+        winreg.SetValueEx(key, "", 0, winreg.REG_SZ, "URL:Enter Key Clicker Bridge")
+        winreg.SetValueEx(key, "URL Protocol", 0, winreg.REG_SZ, "")
+    with winreg.CreateKey(winreg.HKEY_CURRENT_USER, key_path + r"\shell\open\command") as key:
+        winreg.SetValueEx(key, "", 0, winreg.REG_SZ, command)
+
+
+def register_launcher():
+    # Windows-only per design: macOS (and Linux) start the bridge manually.
+    if sys.platform != "win32":
+        return
+    try:
+        _register_launcher_windows()
+    except OSError:
+        pass
+
+
 class Handler(BaseHTTPRequestHandler):
     def _cors(self):
         self.send_header("Access-Control-Allow-Origin", "*")
@@ -586,6 +641,7 @@ if __name__ == "__main__":
     print(f"Enter Key Clicker bridge listening on http://{HOST}:{PORT}")
     print("Open the web app and press Start — presses will land in the frontmost app.")
     print("Stop this helper with Ctrl+C (or just close this window).")
+    register_launcher()
     try:
         server.serve_forever()
     except KeyboardInterrupt:

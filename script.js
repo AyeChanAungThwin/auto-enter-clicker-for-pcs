@@ -107,7 +107,7 @@ const I18N = {
     bridge_offline: "Bridge: offline",
     bridge_pressing: "Bridge: pressing",
     start_bridge: "Start bridge",
-    start_bridge_title: "One-click relaunch of bridge.py on this PC when it is not running. The very first time it needs a one-second setup: run the enable-bridge-launch script for your platform in this folder (Windows .bat, macOS .command, Linux .sh), and allow the browser's open-app dialog.",
+    start_bridge_title: "Windows only — when the bridge is not running, this launches start-bridge.bat on this PC (the same visible console window as double-clicking it). Available once the bridge has run on this PC one time — that run registers the launcher.",
     bridge_launching_toast: "Launching the bridge — if the browser asks, allow opening Enter Key Clicker Bridge",
     bridge_started_toast: "Bridge is online again — real pressing is available",
     bridge_failed_toast: "Bridge did not come online — allow the browser dialog, or run {script} once and click Start bridge again",
@@ -226,7 +226,7 @@ const I18N = {
     bridge_offline: "Bridge: အလုပ်မလုပ်ပါ",
     bridge_pressing: "Bridge: နှိပ်နေသည်",
     start_bridge: "ဘရစ်ဇ် စတင်ရန်",
-    start_bridge_title: "PC တွင် bridge.py ကို နှိပ်တစ်ချက်ဖြင့် ပြန်စတင်သည်။ ပထမအကြိမ် သုံးမည်မှာ — ဖိုလ်ဒါအတွင်း ကိုယ့် platform အတွက် enable-bridge-launch script (Windows .bat၊ macOS .command၊ Linux .sh) ကို တစ်ကြိမ် လည်ပတ်ထားပြီး browser ၏ \"app ဖွင့်မလား\" dialog ကို ခွင့်ပြုပါ။",
+    start_bridge_title: "Windows အတွက်သာ — bridge မလည်ပတ်နေလျှင် ဤ PC ၌ start-bridge.bat ကို ဖွင့်ပေးသည် (နှစ်ချက်နှိပ်ခြင်းနှင့် အတူတူပင် — console window မြင်ရမည်)။ bridge ကို ဤ PC တွင် တစ်ကြိမ် လည်ပတ်ပြီးလျှင် ရရှိသည် — ထိုလည်ပတ်မှုက launcher ကို အလိုအလျောက် မှတ်ပုံတင်ပေးသည်။",
     bridge_launching_toast: "ဘရစ်ဇ် စတင်နေသည် — browser မေးလျှင် Enter Key Clicker Bridge ကို ဖွင့်ခွင့်ပြုပါ",
     bridge_started_toast: "ဘရစ်ဇ် ပြန်လည်ချိတ်ဆက်ပြီး — စစ်မှန်ခလုတ်များ နှိပ်နိုင်ပါပြီ",
     bridge_failed_toast: "ဘရစ်ဇ် မလာပါ — browser dialog ကို ခွင့်ပြုပါ (သို့) {script} ကို တစ်ကြိမ် လည်ပတ်ပြီး ထပ်နှိပ်ပါ",
@@ -345,7 +345,7 @@ const I18N = {
     bridge_offline: "Bridge：离线",
     bridge_pressing: "Bridge：按键中",
     start_bridge: "启动 Bridge",
-    start_bridge_title: "bridge.py 不在运行时，一键在这台电脑上重新启动。首次使用需一次性设置：先在本文件夹运行对应平台的 enable-bridge-launch 脚本（Windows .bat、macOS .command、Linux .sh），并允许浏览器的“打开应用”弹窗。",
+    start_bridge_title: "仅限 Windows — bridge.py 不在运行时，会在本电脑上运行 start-bridge.bat 启动它，与双击它完全相同。需先让 bridge 在此电脑运行过一次 — 该次运行会自动注册启动器。",
     bridge_launching_toast: "正在启动 bridge — 如浏览器弹出询问，请允许打开 Enter Key Clicker Bridge",
     bridge_started_toast: "Bridge 已恢复在线 — 可以发送真实按键",
     bridge_failed_toast: "Bridge 未上线 — 请允许浏览器弹窗，或先运行一次 {script}，再点击“启动 Bridge”重试",
@@ -464,7 +464,7 @@ const I18N = {
     bridge_offline: "Bridge: 오프라인",
     bridge_pressing: "Bridge: 입력 중",
     start_bridge: "브리지 시작",
-    start_bridge_title: "bridge.py가 실행되지 않을 때 이 PC에서 한 번의 클릭으로 다시 시작합니다. 최초 1회 설정이 필요합니다: 이 폴더에서 플랫폼에 맞는 enable-bridge-launch 스크립트(Windows .bat, macOS .command, Linux .sh)를 실행하고 브라우저의 '앱 열기' 대화상자를 허용하세요.",
+    start_bridge_title: "Windows 전용 — bridge가 실행되지 않을 때 이 PC에서 start-bridge.bat를 실행해 시작하며, 더블클릭하는 것과 동일합니다. 이 PC에서 bridge가 한 번 실행된 이후 사용할 수 있습니다 — 해당 실행 시 런처가 자동 등록됩니다.",
     bridge_launching_toast: "브리지를 시작하는 중 — 브라우저가 묻는다면 Enter Key Clicker Bridge 열기를 허용하세요",
     bridge_started_toast: "브리지가 다시 온라인 상태입니다 — 실제 키 입력이 가능합니다",
     bridge_failed_toast: "브리지가 온라인이 되지 않았습니다 — 브라우저 대화상자를 허용하거나 {script}를 한 번 실행한 뒤 '브리지 시작'을 다시 누르세요",
@@ -1030,6 +1030,7 @@ function setBridgeBadge(key, cssClass) {
 }
 
 function showStartBridgeBtn() {
+  if (!isWindowsBrowser()) return; // the one-click launcher is Windows-only
   if (bridgeLaunchTimerId !== null) return; // a launch attempt is in flight
   el.startBridgeBtn.hidden = false;
 }
@@ -1054,36 +1055,42 @@ async function probeBridge() {
 }
 
 /* --------------------------------------------------------------------------
- * Bridge launcher — fires the enterclickerbridge:// handler (registered once
- * per device via the enable-bridge-launch scripts) and polls /ping until the
- * helper answers. The page tries it once on load; if it does not come up,
- * the Start bridge button repeats it on demand.
+ * Bridge launcher (Windows only) — fires the enterclickerbridge:// handler
+ * (registered by bridge.py itself every time it runs) and polls /ping until
+ * the helper answers. Windows gets the auto-attempt on page load plus the
+ * Start bridge button; on other platforms the bridge is started manually.
  * ------------------------------------------------------------------------ */
 const BRIDGE_PROTOCOL = "enterclickerbridge:";
 const BRIDGE_LAUNCH_WAIT_MS = 20000;
 let bridgeLaunchTimerId = null;
 
+function isWindowsBrowser() {
+  return /Windows/i.test(navigator.userAgent);
+}
+
 function fireBridgeProtocol() {
-  // A hidden iframe keeps the page where it is; browsers still show their
-  // "open this app?" dialog (and block the fire entirely without it being
-  // registered — the poll below then just times out).
-  const frame = document.createElement("iframe");
-  frame.style.display = "none";
-  frame.src = `${BRIDGE_PROTOCOL}start`;
-  document.body.appendChild(frame);
-  setTimeout(() => frame.remove(), 2000);
+  // Launch from the TOP frame inside the click's user-activation window:
+  // Chrome ignores custom-scheme navigations from a freshly created iframe
+  // (activation is per-frame), so an `<a>` click is the reliable trigger.
+  // Without a registered handler nothing happens and the poll below times out.
+  const anchor = document.createElement("a");
+  anchor.href = `${BRIDGE_PROTOCOL}start`;
+  anchor.style.display = "none";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
 }
 
 function bridgeLaunchScriptName() {
-  return {
-    windows: "enable-bridge-launch-windows.bat",
-    mac: "enable-bridge-launch-mac.command",
-    linux: "enable-bridge-launch-linux.sh",
-  }[settings.platform];
+  return "enable-bridge-launch-windows.bat";
 }
 
 function launchBridge(auto) {
-  if (bridgeLaunchTimerId !== null) return;
+  // Manual clicks always (re)start the attempt — they carry the user
+  // activation the fire needs; auto-starts never interrupt one in flight.
+  if (auto && bridgeLaunchTimerId !== null) return;
+  clearInterval(bridgeLaunchTimerId);
+  bridgeLaunchTimerId = null;
   el.startBridgeBtn.disabled = true;
   if (!auto) showToast(t("bridge_launching_toast"), 10000);
 
@@ -2181,12 +2188,12 @@ function init() {
   applyTheme(settings.theme);
   el.langSelect.value = settings.lang;
   applyLanguage();
-  // Auto-start the bridge on first page access. If the device has no
-  // registered launcher (or the browser blocks the fire without a user
-  // gesture), the attempt times out quietly and the Start bridge button
-  // — already shown — repeats it on click.
+  // Auto-start the bridge on first page access (Windows only). If there is
+  // no registered launcher yet, or the browser blocks the fire until the
+  // user allows it, the attempt times out quietly and the Start bridge
+  // button — already shown — repeats it on click.
   probeBridge().then((data) => {
-    if (!data || !data.ok) launchBridge(true);
+    if ((!data || !data.ok) && isWindowsBrowser()) launchBridge(true);
   });
 
   // Interval + repeat controls
