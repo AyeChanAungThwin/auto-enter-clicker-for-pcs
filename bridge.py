@@ -20,7 +20,8 @@ Endpoints:
   POST /start   {"interval": 10-9999, "count": 0 (infinite) | 1-9999,
                  "click": 0|1, "tab": 0|1,
                  "clickList": [[x, y], ...] (0-20 entries, each 0-99999)
-                 — each interval fires the whole list 0.2s apart}
+                 — each cycle fires the whole list 0.2s apart; the cycle
+                 between bursts is interval + 0.2s × entries}
   POST /stop    -> stops any running press loop
 """
 import json
@@ -42,8 +43,8 @@ AIM_TIMEOUT_MAX = 60
 # Same loop as the "Copy Terminal command" feature: keydown + 20 ms hold +
 # keyup, posted at the HID event tap from an HID-system event source.
 # Each interval fires the WHOLE target list as a burst, one entry every 0.2s
-# (each step: Click(x, y) -> Tab (optional) -> Enter), then waits so the next
-# burst starts one interval after the previous one.
+# (each step: Click(x, y) -> Tab (optional) -> Enter). Burst-to-burst span =
+# I + 0.2s per entry, so the cycle includes the burst.
 # __N__ = presses (0 = run forever), __I__ = seconds between bursts,
 # __CE__ = click enabled (0/1), __CT__ = Tab enabled (0/1),
 # __TARGETS__ = JSON array literal like [[100, 200], [3, 4]].
@@ -87,8 +88,8 @@ while (N === 0 || done < N) {
     if (j < steps - 1) $.NSThread.sleepForTimeInterval(0.2);
   }
   if (N !== 0 && done >= N) break;
-  var gap = I - (steps - 1) * 0.2;
-  $.NSThread.sleepForTimeInterval(gap > 0.05 ? gap : 0.05);
+  var gap = I + (TARGETS.length > 0 ? 0.2 : 0);
+  $.NSThread.sleepForTimeInterval(gap);
 }
 "done\""""
 
@@ -106,6 +107,7 @@ class Bridge:
         self.interval = 0
         self.count = 0
         self.step_count = 1
+        self.period = 0
         self.started_at = 0.0
         # RLock: start()/stop() report their result via status() while still
         # holding the lock — a plain Lock would deadlock there.
@@ -115,14 +117,13 @@ class Bridge:
         with self.lock:
             running = self.proc is not None and self.proc.poll() is None
             presses = 0
-            if running and self.interval > 0:
-                # Burst mode: each interval fires step_count presses 0.2s
-                # apart, then waits out the rest of the interval.
-                period = max(self.interval, self.step_count * 0.2)
+            if running and self.period > 0:
+                # Burst mode: each cycle fires step_count presses 0.2s apart,
+                # then waits so the next burst lands one full period later.
                 elapsed = time.time() - self.started_at
-                cycles = elapsed // period
-                cycle_elapsed = elapsed - cycles * period
-                done = int(cycles) * self.step_count
+                cycles = int(elapsed // self.period)
+                cycle_elapsed = elapsed - cycles * self.period
+                done = cycles * self.step_count
                 done += min(self.step_count, 1 + int(cycle_elapsed // 0.2))
                 presses = int(done)
                 if self.count > 0:
@@ -148,7 +149,8 @@ class Bridge:
             )
             self.interval = interval
             self.count = count
-            self.step_count = len(targets) if click and targets else 1
+            self.step_count = len(targets) if targets else 1
+            self.period = interval + (len(targets) * 0.2 if targets else 0)
             self.started_at = time.time()
             self.proc = subprocess.Popen(
                 ["osascript", "-l", "JavaScript", "-e", script],

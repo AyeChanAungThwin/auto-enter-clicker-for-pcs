@@ -68,7 +68,7 @@ const I18N = {
     tab_title: "Press Tab before Enter",
     tab_hint: "Moves focus to the next field before each Enter press",
     targets_label: "Press targets",
-    targets_hint: 'Every interval fires the whole list as a burst, one entry every 0.2 seconds, wrapping around: <strong>click &rarr; tab &rarr; enter</strong>. <strong>Pick</strong> adds a target (up to 20); <strong>Reset list</strong> clears everything until new targets are added.',
+    targets_hint: 'Every interval fires the whole list as a burst, one entry every 0.2 seconds, wrapping around: <strong>click &rarr; tab &rarr; enter</strong>. A full cycle is the interval plus 0.2s per entry (2 targets, 10s interval &rarr; 10.4s). <strong>Pick</strong> adds a target (up to 20); <strong>Reset list</strong> clears everything until new targets are added.',
     pick_title: "Adds a new target to the list: the bridge dims the whole PC screen with a crosshair overlay — click anywhere on the screen to add the target (Esc cancels). Without the bridge, an in-page reticle captures the cursor position after a short countdown.",
     add_target: "Add target manually",
     reset_targets: "Reset list",
@@ -182,7 +182,7 @@ const I18N = {
     tab_title: "Enter မနှိပ်မှီ Tab နှိပ်သည်",
     tab_hint: "Enter တစ်ကြိမ်စီမတိုင်မီ focus ကို နောက် field သို့ ရွှေ့သည်",
     targets_label: "နှိပ်မည့်ပန်းတိုင်များ",
-    targets_hint: 'Interval တစ်ကြိမ်တွင် list တစ်ခုလုံးကို 0.2 စက္ကန့်စီဖြင့် တစ်ခုပြီးတစ်ခု အစီအစဉ်တကျ (ပြန်လည်လည်ပတ်၍) နှိပ်သည် — <strong>click &rarr; tab &rarr; enter</strong>။ <strong>Pick</strong> ဖြင့် ပန်းတိုင် အသစ် ထည့်သည် (အများဆုံး ၂၀)။ <strong>Reset list</strong> ဖြင့် အားလုံးကို ရှင်းလင်းပြီး ပန်းတိုင်အသစ် ထပ်ထည့်မချင်း လစ်လုပ်သည်။',
+    targets_hint: 'Interval တစ်ကြိမ်တွင် list တစ်ခုလုံးကို 0.2 စက္ကန့်စီဖြင့် တစ်ခုပြီးတစ်ခု အစီအစဉ်တကျ (ပြန်လည်လည်ပတ်၍) နှိပ်သည် — <strong>click &rarr; tab &rarr; enter</strong>။ စံကာလတစ်ပတ်သည် interval + ပန်းတိုင်တစ်ခုလျှင် 0.2 စက္ကန့် ဖြစ်သည် (၂ ခု၊ 10s &rarr; 10.4s)။ <strong>Pick</strong> ဖြင့် ပန်းတိုင် အသစ် ထည့်သည် (အများဆုံး ၂၀)။ <strong>Reset list</strong> ဖြင့် အားလုံးကို ရှင်းလင်းပြီး ပန်းတိုင်အသစ် ထပ်ထည့်မချင်း လစ်လုပ်သည်။',
     pick_title: "List သို့ ပန်းတိုင် အသစ် ထည့်သည် — Bridge လည်ပတ်နေပါက PC မျက်နှာပြင်တစ်ခုလုံး မှောင်၍ crosshair ပြသည် — မျက်နှာပြင်ရှိ မည်နေရာမဆို နှိပ်၍ ထည့်ပါ (ပယ်ဖျက်ရန် Esc)။ Bridge မရှိလျှင် စာမျက်နှာအတွင်း reticle ဖြင့် ခဏစောင့်ပြီး နေရာဖမ်းယူသည်။",
     add_target: "ပန်းတိုင် ကိုယ်တိုင် ထည့်ရန်",
     reset_targets: "List ပြန်ညှိ",
@@ -296,7 +296,7 @@ const I18N = {
     tab_title: "Enter 前先按 Tab",
     tab_hint: "每次按 Enter 前，先将焦点移到下一个字段",
     targets_label: "按键目标",
-    targets_hint: '每个间隔将整个列表连续执行一遍，各项间隔 0.2 秒，循环往复：<strong>点击 &rarr; Tab &rarr; Enter</strong>。<strong>Pick</strong> 添加目标（最多 20 个）；<strong>重置列表</strong>会清空全部，直到重新添加目标。',
+    targets_hint: '每个间隔将整个列表连续执行一遍，各项间隔 0.2 秒，循环往复：<strong>点击 &rarr; Tab &rarr; Enter</strong>。一个完整周期为间隔 + 每个目标 0.2 秒（2 个目标、10s &rarr; 10.4s）。<strong>Pick</strong> 添加目标（最多 20 个）；<strong>重置列表</strong>会清空全部，直到重新添加目标。',
     pick_title: "向列表添加新目标：bridge 运行时会让整个电脑屏幕变暗并显示跟随光标的十字准线 — 在屏幕任意位置左键单击即可添加目标（Esc 取消）。没有 bridge 时，页面内的准线会在短暂倒计时后捕获光标位置。",
     add_target: "手动添加目标",
     reset_targets: "重置列表",
@@ -410,7 +410,7 @@ const I18N = {
     tab_title: "Enter 전에 Tab 누르기",
     tab_hint: "Enter를 누르기 전에 포커스를 다음 필드로 이동합니다",
     targets_label: "입력 대상 목록",
-    targets_hint: '간격마다 목록 전체를 한 번에 실행하며 각 항목은 0.2초 간격, 순서대로 반복합니다: <strong>클릭 &rarr; Tab &rarr; Enter</strong>. <strong>Pick</strong>은 대상을 추가하고(최대 20개), <strong>목록 초기화</strong>는 새 대상을 추가하기 전까지 모두 비웁니다.',
+    targets_hint: '간격마다 목록 전체를 한 번에 실행하며 각 항목은 0.2초 간격, 순서대로 반복합니다: <strong>클릭 &rarr; Tab &rarr; Enter</strong>. 하나의 전체 주기는 간격 + 항목당 0.2초입니다(2개, 10s &rarr; 10.4s). <strong>Pick</strong>은 대상을 추가하고(최대 20개), <strong>목록 초기화</strong>는 새 대상을 추가하기 전까지 모두 비웁니다.',
     pick_title: "목록에 새 대상을 추가합니다: bridge가 실행 중이면 PC 화면 전체가 어두워지고 커서를 따르는 십자선이 표시됩니다 — 화면 아무 곳이나 왼쪽 클릭하여 대상을 추가하세요(Esc로 취소). bridge가 없으면 페이지 내 십자선이 잠시 카운트다운 후 커서 위치를 캡처합니다.",
     add_target: "대상 직접 추가",
     reset_targets: "목록 초기화",
@@ -733,33 +733,41 @@ function stopUiLoop() {
 }
 
 function updateCountdown() {
-  const intervalMs = settings.interval * 1000;
+  const periodMs = cyclePeriodMs();
   let remainingMs;
 
   if (bridge.active) {
-    // Bridge timing: first press at t=0, then one per interval — mirror that.
+    // Bridge timing: burst-to-burst period is cyclePeriodMs — mirror that.
     const elapsed = Date.now() - bridge.startedAt;
-    const sincePress = elapsed % intervalMs;
-    remainingMs = sincePress === 0 ? intervalMs : intervalMs - sincePress;
+    const sincePress = elapsed % periodMs;
+    remainingMs = sincePress === 0 ? periodMs : periodMs - sincePress;
   } else {
     remainingMs = Math.max(0, session.nextFireAt - performance.now());
   }
-  const remainingSec = Math.ceil(remainingMs / 1000);
 
-  // Whole seconds remaining until the next press, clamped to the interval.
+  // Tenths so a 10.4s cycle reads 10.4, not 11.
+  const periodSec = periodMs / 1000;
+  const remainingSec = clamp(Math.ceil(remainingMs / 100) / 10, 0, periodSec);
+  const displayText = Number.isInteger(remainingSec) ? String(remainingSec) : remainingSec.toFixed(1);
+
   const isRunning = session.running || bridge.active;
-  el.countdown.textContent = (isRunning ? clamp(remainingSec, 0, settings.interval) : settings.interval);
+  el.countdown.textContent = isRunning ? displayText : cycleIdleText();
 
-  // Progress within the current interval window (0 → 1), drives ring + bar.
-  const fraction = isRunning ? 1 - remainingMs / intervalMs : 0;
+  // Progress within the current cycle window (0 → 1), drives ring + bar.
+  const fraction = isRunning ? 1 - remainingMs / periodMs : 0;
   const clampedFraction = clamp(fraction, 0, 1);
 
   el.countdownRing.style.setProperty("--progress", `${(clampedFraction * 360).toFixed(1)}deg`);
   el.progressFill.style.width = `${(clampedFraction * 100).toFixed(1)}%`;
 }
 
+function cycleIdleText() {
+  const sec = cyclePeriodMs() / 1000;
+  return Number.isInteger(sec) ? String(sec) : sec.toFixed(1);
+}
+
 function renderIdleCountdown() {
-  el.countdown.textContent = settings.interval;
+  el.countdown.textContent = cycleIdleText();
   el.countdownRing.style.setProperty("--progress", "0deg");
   el.progressFill.style.width = "0%";
 }
@@ -769,10 +777,18 @@ function renderIdleCountdown() {
  * Each interval runs the WHOLE target list in a burst (one step every
  * STEP_DELAY_MS), then waits for the next interval. With the list empty,
  * a burst is a single Tab → Enter step without the click.
+ * The full cycle is interval + (list length × STEP_DELAY_MS) — e.g. a
+ * 10s interval with a 2-entry list starts a new burst every 10.4s, and
+ * the countdown ring/bar cover that whole cycle.
  * ------------------------------------------------------------------------ */
 function cancelStepTimers() {
   session.stepTimers.forEach((id) => clearTimeout(id));
   session.stepTimers = [];
+}
+
+function cyclePeriodMs() {
+  const entries = settings.clickTargets.length;
+  return settings.interval * 1000 + (entries > 0 ? entries * STEP_DELAY_MS : 0);
 }
 
 function scheduleNextCycle() {
@@ -794,10 +810,7 @@ function runCycle() {
     session.stepTimers.push(setTimeout(() => fireStep(i), i * STEP_DELAY_MS));
   }
 
-  // Next cycle at the next exact interval boundary; never before the
-  // burst finishes, so bursts longer than the interval cannot overlap.
-  session.nextFireAt += settings.interval * 1000;
-  session.nextFireAt = Math.max(session.nextFireAt, performance.now() + steps * STEP_DELAY_MS);
+  session.nextFireAt += cyclePeriodMs();
   scheduleNextCycle();
 }
 
@@ -1099,8 +1112,8 @@ function startLocalRun() {
   session.running = true;
   session.firedInCycle = 0;
 
-  session.nextFireAt = performance.now() + settings.interval * 1000;
-  scheduleNextPress();
+  session.nextFireAt = performance.now() + cyclePeriodMs();
+  scheduleNextCycle();
   startUiLoop();
 
   setRunUi(true, false);
@@ -1224,8 +1237,8 @@ function applyIntervalFromInput() {
   if (session.running) {
     // Re-anchor the next press so the change takes effect immediately.
     clearTimeout(session.fireTimeoutId);
-    session.nextFireAt = performance.now() + settings.interval * 1000;
-    scheduleNextPress();
+    session.nextFireAt = performance.now() + cyclePeriodMs();
+    scheduleNextCycle();
   } else {
     renderIdleCountdown();
   }
@@ -1567,10 +1580,12 @@ function buildAppleScript(interval, mode, count) {
     `-- Interval: ${interval}s | Mode: ${mode === "infinite" ? "infinite" : `${count} presses`}\n` +
     `-- Sequence: each interval runs the WHOLE list, one entry every 0.2s${settings.tabBeforeEnter ? " (each step: Tab + Enter after the click)" : " (each step: Enter after the click)"}\n\n`;
 
-  // Each cycle walks the whole target list: 0.2s between steps, then the
-  // interval after the final step. An empty list = one plain Tab/Enter step.
+  // Each cycle walks the whole target list: 0.2s between steps, then
+  // interval + 0.2s after the final step, so a cycle = interval + 0.2s
+  // per entry. An empty list = one plain Tab/Enter step per interval.
   const clickEnabled = clickStepEnabled();
   const cycleLen = clickEnabled ? settings.clickTargets.length : 1;
+  const cycleGap = clickEnabled ? `${interval} + 0.2` : `${interval}`;
   const stepLines =
     (clickEnabled
       ? `\t\tset pt to item ((n mod (count of targetPoints)) + 1) of targetPoints\n` +
@@ -1590,7 +1605,7 @@ function buildAppleScript(interval, mode, count) {
     `\tend tell\n` +
     `\tset n to n + 1\n` +
     `\tif ((n mod cycleLen) is 0) then\n` +
-    `\t\tdelay ${interval} -- list cycle finished: wait the interval\n` +
+    `\t\tdelay ${cycleGap} -- list cycle finished: wait interval + 0.2s per entry\n` +
     `\telse\n` +
     `\t\tdelay 0.2 -- next list step follows shortly\n` +
     `\tend if\n` +
@@ -1655,8 +1670,8 @@ function buildScript(platform, interval, mode, count) {
 
     const body = bodyLines.join("\n");
     const gap = [
-      "    # Pause between list cycles; at least 0.2s so bursts can never overlap",
-      `    $gap = [Math]::Max(0.2, ${interval} - ((${cycleLen} - 1) * 0.2))`,
+      "    # A full cycle is interval + 0.2s per list entry (burst included)",
+      `    $gap = ${clickEnabled ? `${interval} + 0.2` : interval}`,
       "    Start-Sleep -Seconds $gap",
     ].join("\n") + "\n";
     const loop =
@@ -1673,8 +1688,6 @@ function buildScript(platform, interval, mode, count) {
       `tx=(${settings.clickTargets.map((p) => p.x).join(" ")})\n` +
       `ty=(${settings.clickTargets.map((p) => p.y).join(" ")})\n`
     : "";
-  const cycleLen = clickEnabled ? settings.clickTargets.length : 1;
-
   const innerLines = [
     `  cycle=${clickEnabled ? "${#tx[@]}" : "1"}`,
     "  for ((j = 0; j < cycle; j++)); do",
@@ -1689,10 +1702,10 @@ function buildScript(platform, interval, mode, count) {
   innerLines.push("  done");
 
   const body = innerLines.join("\n");
+  const gapValue = clickEnabled ? (interval + 0.2).toFixed(1) : String(interval);
   const gap =
-    `  # Pause between list cycles; at least 0.2s so bursts can never overlap\n` +
-    `  gap=$(awk -v i=${interval} -v c=${cycleLen} 'BEGIN { g = i - (c - 1) * 0.2; print (g < 0.2 ? 0.2 : g) }')\n` +
-    `  sleep "$gap"\n`;
+    `  # A full cycle is interval + 0.2s per list entry (burst included)\n` +
+    `  sleep ${gapValue}\n`;
   const loop =
     mode === "infinite"
       ? `while true; do\n${body}\n${gap}done`
@@ -1747,7 +1760,8 @@ ObjC.import("CoreGraphics");
 ObjC.import("Foundation");
 // N = presses (0 = run forever); I = seconds between list cycles
 // TARGETS = [[x, y], ...] — each cycle runs the WHOLE list, one entry
-// every 0.2s; an empty list is a single Tab/Enter step.
+// every 0.2s; a burst-to-burst span is I + 0.2s per entry; an empty
+// list is a single Tab/Enter step.
 // Sequence per step: Click(x, y)${tab ? " -> Tab" : ""} -> Enter
 var N = ${n}, I = ${i};
 var CLICK = ${click}, TAB = ${tab};
@@ -1787,8 +1801,8 @@ while (N === 0 || done < N) {
     if (j < steps - 1) $.NSThread.sleepForTimeInterval(0.2);
   }
   if (N !== 0 && done >= N) break;
-  var gap = I - (steps - 1) * 0.2;
-  $.NSThread.sleepForTimeInterval(gap > 0.05 ? gap : 0.05);
+  var gap = I + (TARGETS.length > 0 ? 0.2 : 0);
+  $.NSThread.sleepForTimeInterval(gap);
 }
 "done"'`;
 }
