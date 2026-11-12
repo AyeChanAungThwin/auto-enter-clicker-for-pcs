@@ -71,7 +71,7 @@
       <div class="card-head-row">
         <h2 id="controls-heading" data-i18n="controls">Controls</h2>
         <div class="bridge-ctl">
-          <button id="startBridgeBtn" type="button" class="btn btn-ghost btn-small" hidden data-i18n-title="start_bridge_title" title="Windows only — a toggle: when the bridge is offline this starts it silently (no console window; the green badge is the sign); when it is online, clicking this stops the helper. Available once the bridge has run on this PC one time — that run registers the launcher.">
+          <button id="startBridgeBtn" type="button" class="btn btn-ghost btn-small" hidden data-i18n-title="start_bridge_title" title="For Windows, macOS and Linux — a toggle: when the bridge is offline this starts it silently (no window; the green badge is the sign); online, clicking stops the helper. Register first: Windows — run the bridge once; macOS — run enable-bridge-launch-mac.command once (allow the browser to open Enter Key Clicker Bridge when asked); Linux — run enable-bridge-launch-linux.sh once.">
             <svg class="icon-play" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="m5 3 14 9-14 9V3z"></path>
             </svg>
@@ -142,7 +142,7 @@
             </button>
             <button id="resetTargetsBtn" type="button" class="btn btn-ghost btn-small" data-i18n="reset_targets">Reset list</button>
           </div>
-          <p class="xy-hint" data-i18n="targets_hint">Every interval fires the whole list as a burst, one entry every 0.2 seconds, wrapping around: <strong>click &rarr; tab &rarr; enter</strong>. <strong>Pick</strong> adds a target (up to 20); <strong>Reset list</strong> clears everything until new targets are added.</p>
+          <p class="xy-hint" data-i18n="targets_hint">Each cycle waits the interval first, then fires the whole list as a burst at the end of it — one entry every 0.2 seconds, wrapping around: <strong>click &rarr; tab &rarr; enter</strong>. <strong>Pick</strong> adds a target (up to 20); <strong>Reset list</strong> clears everything until new targets are added.</p>
           <p class="field-error" id="clickXYError" role="alert" hidden data-i18n="targets_error">All coordinates must be whole numbers between 0 and 99999.</p>
         </div>
 
@@ -323,6 +323,6 @@
     <span class="aim-label" id="aimLabel">5…</span>
   </div>
 
-  <script src="script.js?v=16"></script>
+  <script src="script.js?v=18"></script>
 </body>
 </html>

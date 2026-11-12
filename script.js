@@ -68,7 +68,7 @@ const I18N = {
     tab_title: "Press Tab before Enter",
     tab_hint: "Moves focus to the next field before each Enter press",
     targets_label: "Press targets",
-    targets_hint: 'Every interval fires the whole list as a burst, one entry every 0.2 seconds, wrapping around: <strong>click &rarr; tab &rarr; enter</strong>. A full cycle is the interval plus 0.2s per entry (2 targets, 10s interval &rarr; 10.4s). <strong>Pick</strong> adds a target (up to 20); <strong>Reset list</strong> clears everything until new targets are added.',
+    targets_hint: 'Each cycle waits the interval first, then fires the whole list as a burst at the end of it — one entry every 0.2 seconds, wrapping around: <strong>click &rarr; tab &rarr; enter</strong>. A full cycle is the interval plus 0.2s per entry (2 targets, 10s interval &rarr; presses at 10.0s and 10.2s). <strong>Pick</strong> adds a target (up to 20); <strong>Reset list</strong> clears everything until new targets are added.',
     pick_title: "Adds a new target to the list: the bridge dims the whole PC screen with a crosshair overlay — click anywhere on the screen to add the target (Esc cancels). Without the bridge, an in-page reticle captures the cursor position after a short countdown.",
     add_target: "Add target manually",
     reset_targets: "Reset list",
@@ -109,7 +109,7 @@ const I18N = {
     start_bridge: "Start bridge",
     stop_bridge: "Stop bridge",
     bridge_stopped: "Bridge stopped — real pressing is unavailable until it starts again",
-    start_bridge_title: "Windows only — a toggle: when the bridge is offline this starts it silently (no console window; the green badge is the sign); when it is online, clicking this stops the helper. Available once the bridge has run on this PC one time — that run registers the launcher.",
+    start_bridge_title: "For Windows, macOS and Linux — a toggle: when the bridge is offline this starts it silently (no window; the green badge is the sign); online, clicking stops the helper. Register first: Windows — run the bridge once; macOS — run enable-bridge-launch-mac.command once (allow the browser to open Enter Key Clicker Bridge when asked); Linux — run enable-bridge-launch-linux.sh once.",
     bridge_launching_toast: "Launching the bridge — if the browser asks, allow opening Enter Key Clicker Bridge",
     bridge_started_toast: "Bridge is online again — real pressing is available",
     bridge_failed_toast: "Bridge did not come online — install Python on this PC, allow the browser dialog, then click Start bridge again",
@@ -189,7 +189,7 @@ const I18N = {
     tab_title: "Enter မနှိပ်မှီ Tab နှိပ်သည်",
     tab_hint: "Enter တစ်ကြိမ်စီမတိုင်မီ focus ကို နောက် field သို့ ရွှေ့သည်",
     targets_label: "နှိပ်မည့်ပန်းတိုင်များ",
-    targets_hint: 'Interval တစ်ကြိမ်တွင် list တစ်ခုလုံးကို 0.2 စက္ကန့်စီဖြင့် တစ်ခုပြီးတစ်ခု အစီအစဉ်တကျ (ပြန်လည်လည်ပတ်၍) နှိပ်သည် — <strong>click &rarr; tab &rarr; enter</strong>။ စံကာလတစ်ပတ်သည် interval + ပန်းတိုင်တစ်ခုလျှင် 0.2 စက္ကန့် ဖြစ်သည် (၂ ခု၊ 10s &rarr; 10.4s)။ <strong>Pick</strong> ဖြင့် ပန်းတိုင် အသစ် ထည့်သည် (အများဆုံး ၂၀)။ <strong>Reset list</strong> ဖြင့် အားလုံးကို ရှင်းလင်းပြီး ပန်းတိုင်အသစ် ထပ်ထည့်မချင်း လစ်လုပ်သည်။',
+    targets_hint: 'စံကာလ စောင့်ပြီးမှ ပတ်လမ်းတစ်ခု၏ အဆုံးပိုင်းတွင် list တစ်ခုလုံးကို 0.2 စက္ကန့်စီဖြင့် အစီအစဉ်တကျ (ပြန်လည်လည်ပတ်၍) နှိပ်သည် — <strong>click &rarr; tab &rarr; enter</strong>။ စံကာလတစ်ပတ်သည် interval + ပန်းတိုင်တစ်ခုလျှင် 0.2 စက္ကန့် ဖြစ်သည် (၂ ခု၊ 10s interval &rarr; 10.0s နှင့် 10.2s တွင် နှိပ်)။ <strong>Pick</strong> ဖြင့် ပန်းတိုင် အသစ် ထည့်သည် (အများဆုံး ၂၀)။ <strong>Reset list</strong> ဖြင့် အားလုံးကို ရှင်းလင်းပြီး ပန်းတိုင်အသစ် ထပ်ထည့်မချင်း လစ်လုပ်သည်။',
     pick_title: "List သို့ ပန်းတိုင် အသစ် ထည့်သည် — Bridge လည်ပတ်နေပါက PC မျက်နှာပြင်တစ်ခုလုံး မှောင်၍ crosshair ပြသည် — မျက်နှာပြင်ရှိ မည်နေရာမဆို နှိပ်၍ ထည့်ပါ (ပယ်ဖျက်ရန် Esc)။ Bridge မရှိလျှင် စာမျက်နှာအတွင်း reticle ဖြင့် ခဏစောင့်ပြီး နေရာဖမ်းယူသည်။",
     add_target: "ပန်းတိုင် ကိုယ်တိုင် ထည့်ရန်",
     reset_targets: "List ပြန်ညှိ",
@@ -230,7 +230,7 @@ const I18N = {
     start_bridge: "ဘရစ်ဇ် စတင်ရန်",
     stop_bridge: "ဘရစ်ဇ် ရပ်ရန်",
     bridge_stopped: "ဘရစ်ဇ် ရပ်ပြီး — နောက်တစ်ကြိမ် စတင်သည့်အထိ စစ်မှန်ခလုတ်များ မနှိပ်နိုင်ပါ",
-    start_bridge_title: "Windows အတွက်သာ — toggle ခလုတ်- bridge အလုပ်မလုပ်လျှင် console window မပါဘဲ တိတ်တဆိတ် စတင်သည် (pythonw)၊ လည်ပတ်နေလျှင် နှိပ်၍ ရပ်သည်။ အစိမ်းရောင် badge က ချိတ်ဆက်ထားကြောင်း ပြသည်။ bridge ကို ဤ PC တွင် တစ်ကြိမ် လည်ပတ်ပြီးလျှင် ရရှိသည် — ထိုလည်ပတ်မှုက launcher ကို မှတ်ပုံတင်ပေးသည်။",
+    start_bridge_title: "Windows, macOS နှင့် Linux အတွက် — toggle ခလုတ်- bridge အလုပ်မလုပ်လျှင် window မပါဘဲ တိတ်တဆိတ် စတင်သည် (အစိမ်းရောင် badge က ချိတ်ဆက်ကြောင်း ပြသည်)၊ လည်ပတ်နေလျှင် နှိပ်၍ ရပ်သည်။ အရင် မှတ်ပုံတင်ပါ- Windows — bridge တစ်ကြိမ် လည်ပတ်ရုံပါ။ macOS — enable-bridge-launch-mac.command ကို တစ်ကြိမ် လည်ပတ်ပါ (browser မေးလျှင် Enter Key Clicker Bridge ဖွင့်ခွင့် ပြုပါ)။ Linux — enable-bridge-launch-linux.sh ကို တစ်ကြိမ် လည်ပတ်ပါ။",
     bridge_launching_toast: "ဘရစ်ဇ် စတင်နေသည် — browser မေးလျှင် Enter Key Clicker Bridge ကို ဖွင့်ခွင့်ပြုပါ",
     bridge_started_toast: "ဘရစ်ဇ် ပြန်လည်ချိတ်ဆက်ပြီး — စစ်မှန်ခလုတ်များ နှိပ်နိုင်ပါပြီ",
     bridge_failed_toast: "ဘရစ်ဇ် မလာပါ — ဤ PC တွင် Python ကို ထည့်သွင်းပါ၊ browser dialog ကို ခွင့်ပြုပြီး Start bridge ကို ထပ်နှိပ်ပါ",
@@ -310,7 +310,7 @@ const I18N = {
     tab_title: "Enter 前先按 Tab",
     tab_hint: "每次按 Enter 前，先将焦点移到下一个字段",
     targets_label: "按键目标",
-    targets_hint: '每个间隔将整个列表连续执行一遍，各项间隔 0.2 秒，循环往复：<strong>点击 &rarr; Tab &rarr; Enter</strong>。一个完整周期为间隔 + 每个目标 0.2 秒（2 个目标、10s &rarr; 10.4s）。<strong>Pick</strong> 添加目标（最多 20 个）；<strong>重置列表</strong>会清空全部，直到重新添加目标。',
+    targets_hint: '每个周期先等待间隔时间，再在周期末尾将整个列表连续执行一遍，各项间隔 0.2 秒，循环往复：<strong>点击 &rarr; Tab &rarr; Enter</strong>。一个完整周期为间隔 + 每个目标 0.2 秒（2 个目标、10s 间隔 &rarr; 按键落在 10.0s 和 10.2s）。<strong>Pick</strong> 添加目标（最多 20 个）；<strong>重置列表</strong>会清空全部，直到重新添加目标。',
     pick_title: "向列表添加新目标：bridge 运行时会让整个电脑屏幕变暗并显示跟随光标的十字准线 — 在屏幕任意位置左键单击即可添加目标（Esc 取消）。没有 bridge 时，页面内的准线会在短暂倒计时后捕获光标位置。",
     add_target: "手动添加目标",
     reset_targets: "重置列表",
@@ -351,7 +351,7 @@ const I18N = {
     stop_bridge: "停止 Bridge",
     bridge_stopped: "Bridge 已停止 — 重新启动前无法发送真实按键",
     start_bridge: "启动 Bridge",
-    start_bridge_title: "仅限 Windows — 开关按钮：bridge 未运行时点击会在本电脑上静默启动它，不显示控制台窗口（pythonw），旁边徽标变绿即表示成功；运行中时点击会停止 bridge。需先让 bridge 在此电脑运行过一次 — 该次运行会自动注册启动器。",
+    start_bridge_title: "Windows、macOS 和 Linux — 开关按钮：bridge 未运行时点击会静默启动它，不显示任何窗口，旁边徽标变绿即表示成功；运行中时点击会停止 bridge。先注册：Windows — 运行一次 bridge；macOS — 运行一次 enable-bridge-launch-mac.command（浏览器询问时允许打开 Enter Key Clicker Bridge）；Linux — 运行一次 enable-bridge-launch-linux.sh。",
     bridge_launching_toast: "正在启动 bridge — 如浏览器弹出询问，请允许打开 Enter Key Clicker Bridge",
     bridge_started_toast: "Bridge 已恢复在线 — 可以发送真实按键",
     bridge_failed_toast: "Bridge 未上线 — 请在本机安装 Python，允许浏览器弹窗后再点击“启动 Bridge”",
@@ -431,7 +431,7 @@ const I18N = {
     tab_title: "Enter 전에 Tab 누르기",
     tab_hint: "Enter를 누르기 전에 포커스를 다음 필드로 이동합니다",
     targets_label: "입력 대상 목록",
-    targets_hint: '간격마다 목록 전체를 한 번에 실행하며 각 항목은 0.2초 간격, 순서대로 반복합니다: <strong>클릭 &rarr; Tab &rarr; Enter</strong>. 하나의 전체 주기는 간격 + 항목당 0.2초입니다(2개, 10s &rarr; 10.4s). <strong>Pick</strong>은 대상을 추가하고(최대 20개), <strong>목록 초기화</strong>는 새 대상을 추가하기 전까지 모두 비웁니다.',
+    targets_hint: '각 주기는 간격만큼 먼저 기다린 뒤 주기 끝에서 목록 전체를 0.2초 간격으로 순서대로 실행합니다(반복): <strong>클릭 &rarr; Tab &rarr; Enter</strong>. 하나의 전체 주기는 간격 + 항목당 0.2초입니다(대상 2개, 간격 10s &rarr; 10.0s 및 10.2s에 눌림). <strong>Pick</strong>은 대상을 추가하고(최대 20개), <strong>목록 초기화</strong>는 새 대상을 추가하기 전까지 모두 비웁니다.',
     pick_title: "목록에 새 대상을 추가합니다: bridge가 실행 중이면 PC 화면 전체가 어두워지고 커서를 따르는 십자선이 표시됩니다 — 화면 아무 곳이나 왼쪽 클릭하여 대상을 추가하세요(Esc로 취소). bridge가 없으면 페이지 내 십자선이 잠시 카운트다운 후 커서 위치를 캡처합니다.",
     add_target: "대상 직접 추가",
     reset_targets: "목록 초기화",
@@ -472,7 +472,7 @@ const I18N = {
     stop_bridge: "브리지 중지",
     bridge_stopped: "브리지가 중지되었습니다 — 다시 시작할 때까지 실제 키 입력을 사용할 수 없습니다",
     start_bridge: "브리지 시작",
-    start_bridge_title: "Windows 전용 — 토글 버튼: bridge가 꺼져 있을 때 클릭하면 콘솔 창 없이 이 PC에서 조용히 시작됩니다(pythonw), 옆의 배지가 초록색으로 바뀌면 성공입니다; 실행 중일 때 클릭하면 bridge가 중지됩니다. 이 PC에서 bridge가 한 번 실행된 이후 사용할 수 있습니다 — 해당 실행 시 런처가 자동 등록됩니다.",
+    start_bridge_title: "Windows, macOS, Linux — 토글 버튼: bridge가 꺼져 있을 때 클릭하면 창 없이 조용히 시작되고(배지가 초록색으로 바뀌면 성공), 실행 중일 때 클릭하면 bridge가 중지됩니다. 먼저 등록하세요: Windows — bridge를 한 번 실행; macOS — enable-bridge-launch-mac.command를 한 번 실행(브라우저가 묻으면 Enter Key Clicker Bridge 열기를 허용); Linux — enable-bridge-launch-linux.sh를 한 번 실행.",
     bridge_launching_toast: "브리지를 시작하는 중 — 브라우저가 묻는다면 Enter Key Clicker Bridge 열기를 허용하세요",
     bridge_started_toast: "브리지가 다시 온라인 상태입니다 — 실제 키 입력이 가능합니다",
     bridge_failed_toast: "브리지가 온라인이 되지 않았습니다 — 이 PC에 Python을 설치하고 브라우저 대화상자를 허용한 뒤 '브리지 시작'을 다시 누르세요",
@@ -801,12 +801,10 @@ function renderIdleCountdown() {
 
 /* --------------------------------------------------------------------------
  * Scheduling — drift-free via absolute target timestamps
- * Each interval runs the WHOLE target list in a burst (one step every
- * STEP_DELAY_MS), then waits for the next interval. With the list empty,
- * a burst is a single Tab → Enter step without the click.
- * The full cycle is interval + (list length × STEP_DELAY_MS) — e.g. a
- * 10s interval with a 2-entry list starts a new burst every 10.4s, and
- * the countdown ring/bar cover that whole cycle.
+ * Each cycle WAITS the interval first, then fires the WHOLE target list in
+ * a burst (one step every STEP_DELAY_MS) at the end of the cycle: with a
+ * 10s interval and a 2-entry list, presses land at 10.0s and 10.2s of each
+ * 10.4s cycle. With the list empty, one plain Tab → Enter at the mark.
  * ------------------------------------------------------------------------ */
 function cancelStepTimers() {
   session.stepTimers.forEach((id) => clearTimeout(id));
@@ -824,8 +822,8 @@ function cyclePeriodMs() {
 function rescheduleForCyclePeriod() {
   if (session.running) {
     clearTimeout(session.fireTimeoutId);
-    session.nextFireAt = performance.now() + cyclePeriodMs();
-    scheduleNextCycle();
+    session.nextFireAt = performance.now();
+    runCycle();
   } else {
     renderIdleCountdown();
   }
@@ -844,10 +842,11 @@ function onIntervalElapsed() {
 function runCycle() {
   cancelStepTimers();
 
-  // Empty list → one plain step (Tab → Enter, no click).
+  // Presses come after the interval wait — at the tail of each cycle.
   const steps = settings.clickTargets.length || 1;
+  const burstStartMs = settings.interval * 1000;
   for (let i = 0; i < steps; i++) {
-    session.stepTimers.push(setTimeout(() => fireStep(i), i * STEP_DELAY_MS));
+    session.stepTimers.push(setTimeout(() => fireStep(i), burstStartMs + i * STEP_DELAY_MS));
   }
 
   session.nextFireAt += cyclePeriodMs();
@@ -1043,10 +1042,10 @@ function bridgeOnline() {
   return bridge.badgeKey === "bridge_connected" || bridge.badgeKey === "bridge_pressing";
 }
 
-/** The Windows-only toggle: offline -> "Start bridge" (fires the launcher),
- *  online -> "Stop bridge" (shuts the helper down). */
+/** The launcher-platform toggle: offline -> "Start bridge" (fires the
+ *  launcher), online -> "Stop bridge" (shuts the helper down). */
 function updateStartBridgeBtn() {
-  if (!isWindowsBrowser()) return; // the one-click launcher is Windows-only
+  if (!isBridgeLauncherBrowser()) return; // Windows + macOS + Linux
   if (bridgeLaunchTimerId !== null) return; // a launch attempt is in flight
   if (bridgeStopTimerId !== null) return;   // a stop attempt is in flight
   el.startBridgeBtn.hidden = false;
@@ -1074,10 +1073,13 @@ async function probeBridge() {
 }
 
 /* --------------------------------------------------------------------------
- * Bridge launcher (Windows only) — fires the enterclickerbridge:// handler
- * (registered by bridge.py itself every time it runs) and polls /ping until
- * the helper answers. Windows gets the auto-attempt on page load plus the
- * Start bridge button; on other platforms the bridge is started manually.
+ * Bridge launcher (Windows + macOS + Linux) — fires the enterclickerbridge://
+ * handler and polls /ping until the helper answers. Windows registers the
+ * handler with the registry every bridge run; macOS registers the
+ * EnterClickerBridge.app bundle via enable-bridge-launch-mac.command; Linux
+ * associates EnterClickerBridge.desktop via enable-bridge-launch-linux.sh
+ * (xdg-mime). All three platforms get the auto-attempt on page load plus
+ * the Start bridge button; the helper starts silently on every one.
  * ------------------------------------------------------------------------ */
 const BRIDGE_PROTOCOL = "enterclickerbridge:";
 const BRIDGE_LAUNCH_WAIT_MS = 20000;
@@ -1120,6 +1122,27 @@ function isWindowsBrowser() {
   return /Windows/i.test(navigator.userAgent);
 }
 
+function isMacBrowser() {
+  return /Mac/i.test(navigator.userAgent);
+}
+
+function isLinuxBrowser() {
+  return /Linux/i.test(navigator.userAgent) && !isAndroidBrowser();
+}
+
+function isAndroidBrowser() {
+  return /Android/i.test(navigator.userAgent);
+}
+
+/** Platforms where the one-click enterclickerbridge:// launcher exists:
+ *  Windows (protocol handler, registered by every bridge run), macOS
+ *  (EnterClickerBridge.app, registered by enable-bridge-launch-mac.command)
+ *  and Linux (EnterClickerBridge.desktop, registered by
+ *  enable-bridge-launch-linux.sh). */
+function isBridgeLauncherBrowser() {
+  return isWindowsBrowser() || isMacBrowser() || isLinuxBrowser();
+}
+
 function fireBridgeProtocol() {
   // Launch from the TOP frame inside the click's user-activation window:
   // Chrome ignores custom-scheme navigations from a freshly created iframe
@@ -1134,7 +1157,9 @@ function fireBridgeProtocol() {
 }
 
 function bridgeLaunchScriptName() {
-  return "enable-bridge-launch-windows.bat";
+  if (isWindowsBrowser()) return "enable-bridge-launch-windows.bat";
+  if (isMacBrowser()) return "enable-bridge-launch-mac.command";
+  return "enable-bridge-launch-linux.sh";
 }
 
 function launchBridge(auto) {
@@ -1202,7 +1227,10 @@ async function bridgeStopRequest() {
 
 function startBridgePoll() {
   stopBridgePoll();
-  bridge.pollId = setInterval(bridgePollTick, 500);
+  // 100ms: localhost is cheap, and the keycap animation + click sound mirror
+  // real helper presses — a slower poll made them lag up to a poll tick
+  // behind the actual presses.
+  bridge.pollId = setInterval(bridgePollTick, 100);
 }
 
 function stopBridgePoll() {
@@ -1274,8 +1302,8 @@ function startLocalRun() {
   session.running = true;
   session.firedInCycle = 0;
 
-  session.nextFireAt = performance.now() + cyclePeriodMs();
-  scheduleNextCycle();
+  session.nextFireAt = performance.now();
+  runCycle();
   startUiLoop();
 
   setRunUi(true, false);
@@ -1399,8 +1427,8 @@ function applyIntervalFromInput() {
   if (session.running) {
     // Re-anchor the next press so the change takes effect immediately.
     clearTimeout(session.fireTimeoutId);
-    session.nextFireAt = performance.now() + cyclePeriodMs();
-    scheduleNextCycle();
+    session.nextFireAt = performance.now();
+    runCycle();
   } else {
     renderIdleCountdown();
   }
@@ -1743,14 +1771,13 @@ function buildAppleScript(interval, mode, count) {
   const header =
     `-- Generated by Enter Key Clicker on ${stamp}\n` +
     `-- Interval: ${interval}s | Mode: ${mode === "infinite" ? "infinite" : `${count} presses`}\n` +
-    `-- Sequence: each interval runs the WHOLE list, one entry every 0.2s${settings.tabBeforeEnter ? " (each step: Tab + Enter after the click)" : " (each step: Enter after the click)"}\n\n`;
+    `-- Sequence: each cycle waits the interval, then fires the WHOLE list, one entry every 0.2s${settings.tabBeforeEnter ? " (each step: Tab + Enter after the click)" : " (each step: Enter after the click)"}\n\n`;
 
-  // Each cycle walks the whole target list: 0.2s between steps, then
-  // interval + 0.2s after the final step, so a cycle = interval + 0.2s
-  // per entry. An empty list = one plain Tab/Enter step per interval.
+  // Each cycle WAITS the interval first, then walks the whole target list
+  // (0.2s between steps) at the tail, so a cycle = interval + 0.2s per
+  // entry. An empty list = one plain Tab/Enter step per interval.
   const clickEnabled = clickStepEnabled();
   const cycleLen = clickEnabled ? settings.clickTargets.length : 1;
-  const cycleGap = clickEnabled ? `${interval} + 0.2` : `${interval}`;
   const stepLines =
     (clickEnabled
       ? `\t\tset pt to item ((n mod (count of targetPoints)) + 1) of targetPoints\n` +
@@ -1765,15 +1792,15 @@ function buildAppleScript(interval, mode, count) {
     `set cycleLen to ${cycleLen}\n` +
     `set n to 0\n` +
     `${mode === "infinite" ? "repeat" : `repeat ${count} times`}\n` +
+    `\tif ((n mod cycleLen) is 0) then\n` +
+    `\t\tdelay ${interval} -- cycle wait: the burst lands after the interval\n` +
+    `\telse\n` +
+    `\t\tdelay 0.2 -- next list step follows shortly\n` +
+    `\tend if\n` +
     `\ttell application "System Events"\n` +
     stepLines +
     `\tend tell\n` +
     `\tset n to n + 1\n` +
-    `\tif ((n mod cycleLen) is 0) then\n` +
-    `\t\tdelay ${cycleGap} -- list cycle finished: wait interval + 0.2s per entry\n` +
-    `\telse\n` +
-    `\t\tdelay 0.2 -- next list step follows shortly\n` +
-    `\tend if\n` +
     `end repeat`;
   return `${header}${body}\n`;
 }
@@ -1804,7 +1831,7 @@ function buildScript(platform, interval, mode, count) {
         `    [DllImport("user32.dll")] public static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint dwData, UIntPtr dwExtraInfo);\n` +
         `}\n` +
         `"@\n` +
-        `# Each interval runs the WHOLE list, one entry every 0.2s (wrapping around)\n` +
+        `# Each cycle waits the interval, then runs the WHOLE list, one entry every 0.2s (wrapping around)\n` +
         `$targets = @(\n` +
         settings.clickTargets.map((p) => `    @(${p.x}, ${p.y})`).join(",\n") +
         `\n)\n`;
@@ -1834,22 +1861,22 @@ function buildScript(platform, interval, mode, count) {
     bodyLines.push("    }");
 
     const body = bodyLines.join("\n");
-    const gap = [
-      "    # A full cycle is interval + 0.2s per list entry (burst included)",
-      `    $gap = ${clickEnabled ? `${interval} + 0.2` : interval}`,
-      "    Start-Sleep -Seconds $gap",
+    const burstLoop = [
+      "    # A cycle waits the interval first, then the burst lands",
+      `    Start-Sleep -Seconds ${interval}`,
+      body,
     ].join("\n") + "\n";
     const loop =
       mode === "infinite"
-        ? `while ($true) {\n${body}\n${gap}}`
-        : `for ($i = 1; $i -le ${count}; $i++) {\n${body}\n${gap}}`;
+        ? `while ($true) {\n${burstLoop}}`
+        : `for ($i = 1; $i -le ${count}; $i++) {\n${burstLoop}}`;
     return `${comment}${prelude}\n${loop}\n`;
   }
 
   // linux — bash + xdotool
   const comment = header.replace(/^--/gm, "#");
   const targetsDecl = clickEnabled
-    ? `# Each interval runs the WHOLE list, one entry every 0.2s (wrapping around)\n` +
+    ? `# Each cycle waits the interval, then runs the WHOLE list, one entry every 0.2s (wrapping around)\n` +
       `tx=(${settings.clickTargets.map((p) => p.x).join(" ")})\n` +
       `ty=(${settings.clickTargets.map((p) => p.y).join(" ")})\n`
     : "";
@@ -1867,14 +1894,14 @@ function buildScript(platform, interval, mode, count) {
   innerLines.push("  done");
 
   const body = innerLines.join("\n");
-  const gapValue = clickEnabled ? (interval + 0.2).toFixed(1) : String(interval);
-  const gap =
-    `  # A full cycle is interval + 0.2s per list entry (burst included)\n` +
-    `  sleep ${gapValue}\n`;
+  const burstLoop =
+    `  # A cycle waits the interval first, then the burst lands\n` +
+    `  sleep ${interval}\n` +
+    body + "\n";
   const loop =
     mode === "infinite"
-      ? `while true; do\n${body}\n${gap}done`
-      : `for i in $(seq 1 ${count}); do\n${body}\n${gap}done`;
+      ? `while true; do\n${burstLoop}done`
+      : `for i in $(seq 1 ${count}); do\n${burstLoop}done`;
   return `${comment}${targetsDecl}${loop}\n`;
 }
 
@@ -1923,9 +1950,10 @@ function buildOsaCommand() {
   return `osascript -l JavaScript -e '
 ObjC.import("CoreGraphics");
 ObjC.import("Foundation");
-// N = presses (0 = run forever); I = seconds between list cycles
-// TARGETS = [[x, y], ...] — each cycle runs the WHOLE list, one entry
-// every 0.2s; a burst-to-burst span is I + 0.2s per entry; an empty
+// N = presses (0 = run forever); I = seconds each cycle waits first
+// TARGETS = [[x, y], ...] — each cycle WAITS I, then runs the WHOLE list
+// as a burst, one entry every 0.2s, so presses land I seconds after each
+// cycle mark; a full cycle span is I + 0.2s per entry; an empty
 // list is a single Tab/Enter step.
 // Sequence per step: Click(x, y)${tab ? " -> Tab" : ""} -> Enter
 var N = ${n}, I = ${i};
@@ -1959,15 +1987,13 @@ function press(idx) {
 var steps = TARGETS.length > 0 ? TARGETS.length : 1;
 var done = 0;
 while (N === 0 || done < N) {
+  $.NSThread.sleepForTimeInterval(I);
   for (var j = 0; j < steps; j++) {
     if (N !== 0 && done >= N) break;
     press(TARGETS.length > 0 ? j : 0);
     done += 1;
     if (j < steps - 1) $.NSThread.sleepForTimeInterval(0.2);
   }
-  if (N !== 0 && done >= N) break;
-  var gap = I + (TARGETS.length > 0 ? 0.2 : 0);
-  $.NSThread.sleepForTimeInterval(gap);
 }
 "done"'`;
 }
@@ -2250,7 +2276,7 @@ function init() {
   // user allows it, the attempt times out quietly and the Start bridge
   // button — already shown — repeats it on click.
   probeBridge().then((data) => {
-    if ((!data || !data.ok) && isWindowsBrowser()) launchBridge(true);
+    if ((!data || !data.ok) && isBridgeLauncherBrowser()) launchBridge(true);
   });
 
   // Interval + repeat controls

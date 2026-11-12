@@ -54,9 +54,10 @@ XDOTOOL_MISSING = "xdotool is required on Linux (X11): sudo apt install xdotool"
 
 # macOS loop — same as the "Copy Terminal command" feature: keydown +
 # 20 ms hold + keyup, posted at the HID event tap from an HID-system event
-# source. Each interval fires the WHOLE target list as a burst, one entry
-# every 0.2s (each step: Click(x, y) -> Tab (optional) -> Enter).
-# Burst-to-burst span = I + 0.2s per entry, so the cycle includes the burst.
+# source. Each cycle WAITS the interval first, then fires the WHOLE target
+# list as a burst, one entry every 0.2s (each step: Click(x, y) -> Tab
+# (optional) -> Enter) at the tail of the cycle. Cycle length =
+# I + 0.2s per entry, so presses land interval seconds after every mark.
 # __N__ = presses (0 = run forever), __I__ = seconds between bursts,
 # __CE__ = click enabled (0/1), __CT__ = Tab enabled (0/1),
 # __TARGETS__ = JSON array literal like [[100, 200], [3, 4]].
@@ -93,15 +94,13 @@ function press(idx) {
 var steps = TARGETS.length > 0 ? TARGETS.length : 1;
 var done = 0;
 while (N === 0 || done < N) {
+  $.NSThread.sleepForTimeInterval(I);
   for (var j = 0; j < steps; j++) {
     if (N !== 0 && done >= N) break;
     press(TARGETS.length > 0 ? j : 0);
     done += 1;
     if (j < steps - 1) $.NSThread.sleepForTimeInterval(0.2);
   }
-  if (N !== 0 && done >= N) break;
-  var gap = I + (TARGETS.length > 0 ? 0.2 : 0);
-  $.NSThread.sleepForTimeInterval(gap);
 }
 "done\""""
 
@@ -255,13 +254,16 @@ class Bridge:
             running = self.proc is not None and self.proc.poll() is None
             presses = 0
             if running and self.period > 0:
-                # Burst mode: each cycle fires step_count presses 0.2s apart,
-                # then waits so the next burst lands one full period later.
+                # Burst mode: each cycle WAITS the interval first, then fires
+                # step_count presses 0.2s apart at the tail, so the next burst
+                # lands one full period later (period = interval + 0.2s/entry).
                 elapsed = time.time() - self.started_at
                 cycles = int(elapsed // self.period)
                 cycle_elapsed = elapsed - cycles * self.period
                 done = cycles * self.step_count
-                done += min(self.step_count, 1 + int(cycle_elapsed // 0.2))
+                if cycle_elapsed >= self.interval:
+                    within = cycle_elapsed - self.interval
+                    done += min(self.step_count, 1 + int(within // 0.2))
                 presses = int(done)
                 if self.count > 0:
                     presses = min(presses, self.count)
@@ -300,12 +302,12 @@ class Bridge:
             self.step_count = len(targets) if targets else 1
             self.period = interval + (len(targets) * 0.2 if targets else 0)
             self.started_at = time.time()
-            self.proc = subprocess.Popen(
-                argv,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                start_new_session=True,
-            )
+            kwargs = {"stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL}
+            if sys.platform != "win32":
+                # POSIX-only: detaches the helper from this server's process
+                # group. On Windows this kwarg raises ValueError.
+                kwargs["start_new_session"] = True
+            self.proc = subprocess.Popen(argv, **kwargs)
             return self.status()
 
     def stop(self):

@@ -1,0 +1,10 @@
+#!/bin/bash
+# Enter Key Clicker bridge launcher (macOS) — handle for enterclickerbridge://
+# LaunchServices runs this app bundle with no window (LSUIElement); the script
+# starts bridge.py from the folder the .app lives in, so moving the whole
+# folder keeps the handler working.
+DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
+cd "$DIR"
+# Arguments (the scheme URL) are ignored — bridge.py already handles the
+# "port busy" case by exiting quietly when a bridge is up.
+exec /usr/bin/env python3 bridge.py
