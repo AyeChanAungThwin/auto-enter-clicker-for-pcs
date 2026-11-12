@@ -791,6 +791,19 @@ function cyclePeriodMs() {
   return settings.interval * 1000 + (entries > 0 ? entries * STEP_DELAY_MS : 0);
 }
 
+/* List add/remove/reset changes the burst length, so the full cycle must
+ * be re-anchored right away — while running the next burst moves, while
+ * idle the countdown label re-renders. */
+function rescheduleForCyclePeriod() {
+  if (session.running) {
+    clearTimeout(session.fireTimeoutId);
+    session.nextFireAt = performance.now() + cyclePeriodMs();
+    scheduleNextCycle();
+  } else {
+    renderIdleCountdown();
+  }
+}
+
 function scheduleNextCycle() {
   const delayMs = Math.max(0, session.nextFireAt - performance.now());
   session.fireTimeoutId = setTimeout(onIntervalElapsed, delayMs);
@@ -1535,6 +1548,7 @@ function addClickTarget(x, y) {
   showFieldError(el.clickXYError, false);
   renderTargetList();
   saveClickTargets();
+  rescheduleForCyclePeriod();
   return entry;
 }
 
@@ -1544,6 +1558,7 @@ function removeClickTarget(index) {
   showFieldError(el.clickXYError, false);
   renderTargetList();
   saveClickTargets();
+  rescheduleForCyclePeriod();
 }
 
 /** Clears every target: presses then perform only Tab → Enter. */
@@ -1552,6 +1567,7 @@ function resetClickTargets() {
   showFieldError(el.clickXYError, false);
   renderTargetList();
   saveClickTargets();
+  rescheduleForCyclePeriod();
   showToast(t("reset_targets_toast"));
 }
 
