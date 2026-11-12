@@ -1112,6 +1112,12 @@ function stopBridgeProcess() {
         setBridgeBadge("bridge_offline", "is-off");
         addSystemLog(t("bridge_stopped"));
         showToast(t("bridge_stopped"));
+        // Chrome throttles external-protocol launches inside one page
+        // session, so Start bridge after a Stop can be swallowed. Reload
+        // into a fresh session; the just-stopped flag keeps the page-load
+        // auto-start from undoing the stop.
+        sessionStorage.setItem("echJustStopped", "1");
+        setTimeout(() => location.reload(), 1500);
       }
       updateStartBridgeBtn();
     }
@@ -1174,6 +1180,19 @@ function launchBridge(auto) {
   if (!auto) showToast(t("bridge_launching_toast"), 10000);
 
   fireBridgeProtocol();
+
+  // Chrome can silently drop an activation-carrying external-protocol
+  // launch (the path a button click takes) while still honouring the same
+  // launch without activation via the site's stored "always allow" — the
+  // page-load auto-start relies on that and visibly works. So after a
+  // short grace period, if the helper is still offline, fire once more
+  // *without* activation so the allow path can launch it. Harmless if the
+  // first fire already started it (the guard below) or if it launches a
+  // second instance (bridge.py exits quietly when the port is taken).
+  setTimeout(() => {
+    if (bridgeLaunchTimerId === null) return; // already online or aborted
+    fireBridgeProtocol();
+  }, 2500);
 
   let waited = 0;
   bridgeLaunchTimerId = setInterval(async () => {
@@ -2276,7 +2295,11 @@ function init() {
   // user allows it, the attempt times out quietly and the Start bridge
   // button — already shown — repeats it on click.
   probeBridge().then((data) => {
-    if ((!data || !data.ok) && isBridgeLauncherBrowser()) launchBridge(true);
+    // A deliberate Stop bridge reloads the page with this flag so its
+    // auto-start doesn't immediately undo the stop.
+    const justStopped = sessionStorage.getItem("echJustStopped") === "1";
+    sessionStorage.removeItem("echJustStopped");
+    if (!justStopped && (!data || !data.ok) && isBridgeLauncherBrowser()) launchBridge(true);
   });
 
   // Interval + repeat controls
