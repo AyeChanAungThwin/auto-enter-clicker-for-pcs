@@ -710,6 +710,11 @@ kbd {
   font-size: 0.85rem;
 }
 
+#startBridgeBtn .icon-play { display: block; }
+#startBridgeBtn .icon-stop { display: none; }
+#startBridgeBtn.is-stop .icon-play { display: none; }
+#startBridgeBtn.is-stop .icon-stop { display: block; }
+
 .icon-play { display: block; }
 .icon-stop { display: none; }
 

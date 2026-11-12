@@ -29,6 +29,7 @@ Endpoints:
                  — each cycle fires the whole list 0.2s apart; the cycle
                  between bursts is interval + 0.2s × entries}
   POST /stop    -> stops any running press loop
+  POST /shutdown-> stops the press loop and exits the helper process
 """
 import json
 import os
@@ -440,16 +441,16 @@ aim_overlay = AimOverlay()
 # One-click launcher registration (WINDOWS ONLY) — each time bridge.py runs
 # it registers the enterclickerbridge:// URL protocol handler in HKCU, so the
 # web app's "Start bridge" button (and its automatic attempt on page load)
-# can relaunch the helper later. The launch routes through start-bridge.bat,
-# so pressing the button looks exactly like double-clicking it: a visible
-# console window. Other platforms: no registration — the bridge is started
-# manually there (start-bridge.command / python3 bridge.py).
+# can relaunch the helper later. The launch runs pythonw bridge.py: no
+# console window at all — the page's badge turning green is the confirmation.
+# Other platforms: no registration — the bridge is started manually there
+# (start-bridge.command / python3 bridge.py).
 # ---------------------------------------------------------------------------
 
 BRIDGE_URL_SCHEME = "enterclickerbridge"
 
 
-def _windows_console_launcher():
+def _windows_silent_launcher():
     launcher = os.path.join(os.path.dirname(sys.executable), "pythonw.exe")
     return launcher if os.path.exists(launcher) else sys.executable
 
@@ -457,19 +458,10 @@ def _windows_console_launcher():
 def _register_launcher_windows():
     import winreg
     key_path = r"Software\Classes\%s" % BRIDGE_URL_SCHEME
-    bat = os.path.join(os.path.dirname(os.path.abspath(__file__)), "start-bridge.bat")
-    if os.path.exists(bat):
-        # Route the launch through the user's own start-bridge.bat -> a
-        # visible console window, exactly like double-clicking it. cmd /c
-        # strips the FIRST and LAST quote of the line, so the URL argument
-        # that browsers append would end up unterminated — the doubled
-        # outer quotes compensate for that (the documented handler trick).
-        command = 'cmd.exe /c ""%s" "%%1""' % bat
-    else:
-        command = '"%s" "%s" "%%1"' % (
-            _windows_console_launcher(),
-            os.path.abspath(__file__),
-        )
+    command = '"%s" "%s" "%%1"' % (
+        _windows_silent_launcher(),
+        os.path.abspath(__file__),
+    )
     with winreg.CreateKey(winreg.HKEY_CURRENT_USER, key_path) as key:
         winreg.SetValueEx(key, "", 0, winreg.REG_SZ, "URL:Enter Key Clicker Bridge")
         winreg.SetValueEx(key, "URL Protocol", 0, winreg.REG_SZ, "")
@@ -557,6 +549,11 @@ class Handler(BaseHTTPRequestHandler):
             self._start_from(body)
         elif self.path.startswith("/stop"):
             self._json(200, bridge.stop())
+        elif self.path.startswith("/shutdown"):
+            self._json(200, {"ok": True, "stopping": True})
+            # serve_forever runs on the main thread; this handler thread only
+            # sets it in motion, then __main__ cleans the press loop up.
+            threading.Thread(target=self.server.shutdown, daemon=True).start()
         else:
             self._json(404, {"ok": False})
 
@@ -634,7 +631,12 @@ if __name__ == "__main__":
         run_press_loop(payload)
         raise SystemExit(0)
     try:
-        server = ThreadingHTTPServer((HOST, PORT), Handler)
+        class BridgeServer(ThreadingHTTPServer):
+            # HTTPServer sets allow_reuse_address=True (SO_REUSEADDR); on
+            # Windows that lets several instances bind 8791 simultaneously,
+            # so /shutdown would only stop whichever one the OS routes to.
+            allow_reuse_address = False
+        server = BridgeServer((HOST, PORT), Handler)
     except OSError:
         print(f"Bridge already running (port {PORT} busy) — open the web app and press Start.")
         raise SystemExit(0)
@@ -645,5 +647,7 @@ if __name__ == "__main__":
     try:
         server.serve_forever()
     except KeyboardInterrupt:
+        pass
+    finally:
         bridge.stop()
         print("\nBridge stopped.")

@@ -107,7 +107,9 @@ const I18N = {
     bridge_offline: "Bridge: offline",
     bridge_pressing: "Bridge: pressing",
     start_bridge: "Start bridge",
-    start_bridge_title: "Windows only — when the bridge is not running, this launches start-bridge.bat on this PC (the same visible console window as double-clicking it). Available once the bridge has run on this PC one time — that run registers the launcher.",
+    stop_bridge: "Stop bridge",
+    bridge_stopped: "Bridge stopped — real pressing is unavailable until it starts again",
+    start_bridge_title: "Windows only — a toggle: when the bridge is offline this starts it silently (no console window; the green badge is the sign); when it is online, clicking this stops the helper. Available once the bridge has run on this PC one time — that run registers the launcher.",
     bridge_launching_toast: "Launching the bridge — if the browser asks, allow opening Enter Key Clicker Bridge",
     bridge_started_toast: "Bridge is online again — real pressing is available",
     bridge_failed_toast: "Bridge did not come online — allow the browser dialog, or run {script} once and click Start bridge again",
@@ -226,7 +228,9 @@ const I18N = {
     bridge_offline: "Bridge: အလုပ်မလုပ်ပါ",
     bridge_pressing: "Bridge: နှိပ်နေသည်",
     start_bridge: "ဘရစ်ဇ် စတင်ရန်",
-    start_bridge_title: "Windows အတွက်သာ — bridge မလည်ပတ်နေလျှင် ဤ PC ၌ start-bridge.bat ကို ဖွင့်ပေးသည် (နှစ်ချက်နှိပ်ခြင်းနှင့် အတူတူပင် — console window မြင်ရမည်)။ bridge ကို ဤ PC တွင် တစ်ကြိမ် လည်ပတ်ပြီးလျှင် ရရှိသည် — ထိုလည်ပတ်မှုက launcher ကို အလိုအလျောက် မှတ်ပုံတင်ပေးသည်။",
+    stop_bridge: "ဘရစ်ဇ် ရပ်ရန်",
+    bridge_stopped: "ဘရစ်ဇ် ရပ်ပြီး — နောက်တစ်ကြိမ် စတင်သည့်အထိ စစ်မှန်ခလုတ်များ မနှိပ်နိုင်ပါ",
+    start_bridge_title: "Windows အတွက်သာ — toggle ခလုတ်- bridge အလုပ်မလုပ်လျှင် console window မပါဘဲ တိတ်တဆိတ် စတင်သည် (pythonw)၊ လည်ပတ်နေလျှင် နှိပ်၍ ရပ်သည်။ အစိမ်းရောင် badge က ချိတ်ဆက်ထားကြောင်း ပြသည်။ bridge ကို ဤ PC တွင် တစ်ကြိမ် လည်ပတ်ပြီးလျှင် ရရှိသည် — ထိုလည်ပတ်မှုက launcher ကို မှတ်ပုံတင်ပေးသည်။",
     bridge_launching_toast: "ဘရစ်ဇ် စတင်နေသည် — browser မေးလျှင် Enter Key Clicker Bridge ကို ဖွင့်ခွင့်ပြုပါ",
     bridge_started_toast: "ဘရစ်ဇ် ပြန်လည်ချိတ်ဆက်ပြီး — စစ်မှန်ခလုတ်များ နှိပ်နိုင်ပါပြီ",
     bridge_failed_toast: "ဘရစ်ဇ် မလာပါ — browser dialog ကို ခွင့်ပြုပါ (သို့) {script} ကို တစ်ကြိမ် လည်ပတ်ပြီး ထပ်နှိပ်ပါ",
@@ -344,8 +348,10 @@ const I18N = {
     bridge_connected: "Bridge：已连接",
     bridge_offline: "Bridge：离线",
     bridge_pressing: "Bridge：按键中",
+    stop_bridge: "停止 Bridge",
+    bridge_stopped: "Bridge 已停止 — 重新启动前无法发送真实按键",
     start_bridge: "启动 Bridge",
-    start_bridge_title: "仅限 Windows — bridge.py 不在运行时，会在本电脑上运行 start-bridge.bat 启动它，与双击它完全相同。需先让 bridge 在此电脑运行过一次 — 该次运行会自动注册启动器。",
+    start_bridge_title: "仅限 Windows — 开关按钮：bridge 未运行时点击会在本电脑上静默启动它，不显示控制台窗口（pythonw），旁边徽标变绿即表示成功；运行中时点击会停止 bridge。需先让 bridge 在此电脑运行过一次 — 该次运行会自动注册启动器。",
     bridge_launching_toast: "正在启动 bridge — 如浏览器弹出询问，请允许打开 Enter Key Clicker Bridge",
     bridge_started_toast: "Bridge 已恢复在线 — 可以发送真实按键",
     bridge_failed_toast: "Bridge 未上线 — 请允许浏览器弹窗，或先运行一次 {script}，再点击“启动 Bridge”重试",
@@ -463,8 +469,10 @@ const I18N = {
     bridge_connected: "Bridge: 연결됨",
     bridge_offline: "Bridge: 오프라인",
     bridge_pressing: "Bridge: 입력 중",
+    stop_bridge: "브리지 중지",
+    bridge_stopped: "브리지가 중지되었습니다 — 다시 시작할 때까지 실제 키 입력을 사용할 수 없습니다",
     start_bridge: "브리지 시작",
-    start_bridge_title: "Windows 전용 — bridge가 실행되지 않을 때 이 PC에서 start-bridge.bat를 실행해 시작하며, 더블클릭하는 것과 동일합니다. 이 PC에서 bridge가 한 번 실행된 이후 사용할 수 있습니다 — 해당 실행 시 런처가 자동 등록됩니다.",
+    start_bridge_title: "Windows 전용 — 토글 버튼: bridge가 꺼져 있을 때 클릭하면 콘솔 창 없이 이 PC에서 조용히 시작됩니다(pythonw), 옆의 배지가 초록색으로 바뀌면 성공입니다; 실행 중일 때 클릭하면 bridge가 중지됩니다. 이 PC에서 bridge가 한 번 실행된 이후 사용할 수 있습니다 — 해당 실행 시 런처가 자동 등록됩니다.",
     bridge_launching_toast: "브리지를 시작하는 중 — 브라우저가 묻는다면 Enter Key Clicker Bridge 열기를 허용하세요",
     bridge_started_toast: "브리지가 다시 온라인 상태입니다 — 실제 키 입력이 가능합니다",
     bridge_failed_toast: "브리지가 온라인이 되지 않았습니다 — 브라우저 대화상자를 허용하거나 {script}를 한 번 실행한 뒤 '브리지 시작'을 다시 누르세요",
@@ -567,6 +575,7 @@ function applyLanguage() {
     el.statusText.textContent = t("status_idle");
   }
   el.bridgeBadge.textContent = t(bridge.badgeKey || "bridge_offline");
+  updateStartBridgeBtn();
   updateScript();
 }
 
@@ -604,6 +613,7 @@ const el = {
   soundToggle: $("#soundToggle"),
   bridgeBadge: $("#bridgeBadge"),
   startBridgeBtn: $("#startBridgeBtn"),
+  startBridgeLabel: $("#startBridgeLabel"),
   totalPresses: $("#totalPresses"),
   cyclePresses: $("#cyclePresses"),
   statusText: $("#statusText"),
@@ -1029,10 +1039,21 @@ function setBridgeBadge(key, cssClass) {
   if (cssClass) el.bridgeBadge.classList.add(cssClass);
 }
 
-function showStartBridgeBtn() {
+function bridgeOnline() {
+  return bridge.badgeKey === "bridge_connected" || bridge.badgeKey === "bridge_pressing";
+}
+
+/** The Windows-only toggle: offline -> "Start bridge" (fires the launcher),
+ *  online -> "Stop bridge" (shuts the helper down). */
+function updateStartBridgeBtn() {
   if (!isWindowsBrowser()) return; // the one-click launcher is Windows-only
   if (bridgeLaunchTimerId !== null) return; // a launch attempt is in flight
+  if (bridgeStopTimerId !== null) return;   // a stop attempt is in flight
   el.startBridgeBtn.hidden = false;
+  el.startBridgeBtn.disabled = false;
+  const online = bridgeOnline();
+  el.startBridgeBtn.classList.toggle("is-stop", online);
+  el.startBridgeLabel.textContent = t(online ? "stop_bridge" : "start_bridge");
 }
 
 async function probeBridge() {
@@ -1045,12 +1066,10 @@ async function probeBridge() {
   }
   if (data && data.ok) {
     setBridgeBadge(data.running ? "bridge_pressing" : "bridge_connected", "is-on");
-    el.startBridgeBtn.hidden = true;
-    el.startBridgeBtn.disabled = false;
   } else {
     setBridgeBadge("bridge_offline", "is-off");
-    showStartBridgeBtn();
   }
+  updateStartBridgeBtn();
   return data;
 }
 
@@ -1063,6 +1082,39 @@ async function probeBridge() {
 const BRIDGE_PROTOCOL = "enterclickerbridge:";
 const BRIDGE_LAUNCH_WAIT_MS = 20000;
 let bridgeLaunchTimerId = null;
+let bridgeStopTimerId = null;
+
+/** Stop side of the toggle: end any pressing, then ask the helper to exit
+ *  and poll until /ping stops answering. */
+function stopBridgeProcess() {
+  if (bridgeStopTimerId !== null || bridgeLaunchTimerId !== null) return;
+  el.startBridgeBtn.disabled = true;
+  if (session.running || bridge.active) stopRun("manual");
+  fetch(`${BRIDGE_URL}/shutdown`, { method: "POST" }).catch(() => {});
+
+  let waited = 0;
+  bridgeStopTimerId = setInterval(async () => {
+    waited += 500;
+    let offline = false;
+    try {
+      const res = await fetch(`${BRIDGE_URL}/ping`, { cache: "no-store" });
+      const data = await res.json();
+      offline = !(data && data.ok);
+    } catch {
+      offline = true;
+    }
+    if (offline || waited >= 8000) {
+      clearInterval(bridgeStopTimerId);
+      bridgeStopTimerId = null;
+      if (offline) {
+        setBridgeBadge("bridge_offline", "is-off");
+        addSystemLog(t("bridge_stopped"));
+        showToast(t("bridge_stopped"));
+      }
+      updateStartBridgeBtn();
+    }
+  }, 500);
+}
 
 function isWindowsBrowser() {
   return /Windows/i.test(navigator.userAgent);
@@ -1104,6 +1156,9 @@ function launchBridge(auto) {
       clearInterval(bridgeLaunchTimerId);
       bridgeLaunchTimerId = null;
       el.startBridgeBtn.disabled = false;
+      // probeBridge ran while the launch guard was still set, so its label
+      // update was skipped — repaint now that the attempt is settled.
+      updateStartBridgeBtn();
       addSystemLog(t("bridge_started_toast"));
       if (!auto) showToast(t("bridge_started_toast"));
       return;
@@ -1112,6 +1167,7 @@ function launchBridge(auto) {
       clearInterval(bridgeLaunchTimerId);
       bridgeLaunchTimerId = null;
       el.startBridgeBtn.disabled = false;
+      updateStartBridgeBtn();
       addSystemLog(t("bridge_failed_toast", { script: bridgeLaunchScriptName() }));
       if (!auto) {
         showToast(t("bridge_failed_toast", { script: bridgeLaunchScriptName() }), 8000);
@@ -1171,7 +1227,7 @@ async function bridgePollTick() {
     stopRun("manual");
     addSystemLog(t("bridge_lost_log"));
     showToast(t("bridge_offline_toast"));
-    showStartBridgeBtn();
+    updateStartBridgeBtn();
     return;
   }
 
@@ -2123,11 +2179,12 @@ el.repeatCountInput.addEventListener("keydown", (e) => {
 
 el.clearLogBtn.addEventListener("click", clearLog);
 
-// Start bridge: fires the enterclickerbridge:// launcher and polls until the
-// helper is reachable again (no-op if a launch attempt is already running).
+// Start/Stop bridge toggle: offline -> fire the enterclickerbridge://
+// launcher and poll until the helper is reachable; online -> shut it down.
 el.startBridgeBtn.addEventListener("click", (e) => {
   e.currentTarget.blur();
-  launchBridge(false);
+  if (bridgeOnline()) stopBridgeProcess();
+  else launchBridge(false);
 });
 
 el.soundToggle.addEventListener("change", () => {
