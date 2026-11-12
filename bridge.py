@@ -2,14 +2,17 @@
 """
 Enter Key Clicker — local helper bridge.
 
-Lets the Enter Key Clicker web page start/stop REAL Enter presses on this Mac.
+Lets the Enter Key Clicker web page start/stop REAL Enter presses on this PC.
 The browser itself can never send keystrokes to other apps; this helper runs
-outside the browser and does it, using the same CoreGraphics HID-level
-injection as the generated Terminal command.
+outside the browser and does it, with the same injection the generated
+platform scripts use:
+  macOS   — osascript + CoreGraphics HID-level event posting
+  Windows — ctypes: SetCursorPos / mouse_event / keybd_event (no permission needed)
+  Linux   — xdotool (X11; on Wayland run through the input-group ydotool setup)
 
 Run:            python3 bridge.py
                 (keep the window open — Ctrl+C or close the window to stop)
-Auto-start:     run ./start-bridge.command (add it to Login Items for auto-start)
+Auto-start:     macOS ./start-bridge.command — Windows double-click start-bridge.bat
 
 Endpoints:
   GET  /ping    -> {"ok":true,"running":bool,"presses":int,"interval":int,"count":int}
@@ -26,6 +29,8 @@ Endpoints:
 """
 import json
 import os
+import re
+import shutil
 import subprocess
 import sys
 import threading
@@ -39,12 +44,14 @@ COUNT_MAX = 9999
 XY_MAX = 99999
 MAX_TARGETS = 20
 AIM_TIMEOUT_MAX = 60
+STEP_DELAY = 0.2      # seconds between the entries inside one burst
+XDOTOOL_MISSING = "xdotool is required on Linux (X11): sudo apt install xdotool"
 
-# Same loop as the "Copy Terminal command" feature: keydown + 20 ms hold +
-# keyup, posted at the HID event tap from an HID-system event source.
-# Each interval fires the WHOLE target list as a burst, one entry every 0.2s
-# (each step: Click(x, y) -> Tab (optional) -> Enter). Burst-to-burst span =
-# I + 0.2s per entry, so the cycle includes the burst.
+# macOS loop — same as the "Copy Terminal command" feature: keydown +
+# 20 ms hold + keyup, posted at the HID event tap from an HID-system event
+# source. Each interval fires the WHOLE target list as a burst, one entry
+# every 0.2s (each step: Click(x, y) -> Tab (optional) -> Enter).
+# Burst-to-burst span = I + 0.2s per entry, so the cycle includes the burst.
 # __N__ = presses (0 = run forever), __I__ = seconds between bursts,
 # __CE__ = click enabled (0/1), __CT__ = Tab enabled (0/1),
 # __TARGETS__ = JSON array literal like [[100, 200], [3, 4]].
@@ -101,6 +108,131 @@ var loc = $.CGEventGetLocation($.CGEventCreate($()));
 JSON.stringify({x: loc.x, y: loc.y});"""
 
 
+# ---------------------------------------------------------------------------
+# Native (non-macOS) press loop — runs as `bridge.py --press-loop <json>`.
+# Identical timing to the macOS JXA loop: burst of the whole target list with
+# STEP_DELAY between entries, gap sleep of I + 0.2s × entries after it.
+# ---------------------------------------------------------------------------
+
+def _win_injectors():
+    """Windows: user32 via ctypes — no admin rights or permission needed."""
+    import ctypes
+    user32 = ctypes.windll.user32
+    VK_TAB, VK_RETURN = 0x09, 0x0D
+    MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP = 0x0002, 0x0004
+
+    def click(x, y):
+        user32.SetCursorPos(int(x), int(y))
+        time.sleep(0.02)
+        user32.mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0)
+        time.sleep(0.02)
+        user32.mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
+        time.sleep(0.05)
+
+    def key_tap(vk):
+        user32.keybd_event(vk, 0, 0, 0)
+        time.sleep(0.02)
+        user32.keybd_event(vk, 0, 0x0002, 0)  # KEYEVENTF_KEYUP
+
+    return click, key_tap, lambda: (VK_TAB, VK_RETURN)
+
+
+def _xdotool_injectors():
+    """Linux (X11): xdotool subprocess calls."""
+
+    def click(x, y):
+        subprocess.run(["xdotool", "mousemove", str(int(x)), str(int(y)), "click", "1"], check=True)
+        time.sleep(0.05)
+
+    def key_tap(name):
+        subprocess.run(["xdotool", "key", name], check=True)
+        time.sleep(0.02)
+
+    return click, key_tap, lambda: ("Tab", "Return")
+
+
+class NativePressLoop:
+    """Runs the burst loop in-process (the subprocess side of --press-loop)."""
+
+    def __init__(self, payload):
+        self.click_enabled = bool(payload["click"])
+        self.tab_enabled = bool(payload["tab"])
+        self.targets = payload["targets"]
+        self.interval = float(payload["interval"])
+        self.count = int(payload["count"])
+
+    def run(self):
+        if sys.platform == "win32":
+            click, key_tap, key_names = _win_injectors()
+        else:
+            click, key_tap, key_names = _xdotool_injectors()
+        tab_vk, enter_key = key_names()
+
+        steps = len(self.targets) if self.targets else 1
+        done = 0
+        while self.count == 0 or done < self.count:
+            for j in range(steps):
+                if self.count != 0 and done >= self.count:
+                    break
+                if self.targets and self.click_enabled:
+                    x, y = self.targets[j % len(self.targets)]
+                    click(x, y)
+                if self.tab_enabled:
+                    key_tap(tab_vk)
+                key_tap(enter_key)
+                done += 1
+                if j < steps - 1:
+                    time.sleep(STEP_DELAY)
+            if self.count != 0 and done >= self.count:
+                break
+            time.sleep(self.interval + (0.2 if self.targets else 0))
+
+
+def run_press_loop(payload):
+    try:
+        NativePressLoop(payload).run()
+    except (OSError, KeyError, ValueError):  # xdotool gone / bad payload
+        pass
+
+
+def cursor_position():
+    """Current global cursor position, or None if it cannot be read."""
+    if sys.platform == "darwin":
+        proc = subprocess.run(
+            ["osascript", "-l", "JavaScript", "-e", JXA_PICK],
+            capture_output=True, text=True, timeout=3,
+        )
+        try:
+            point = json.loads(proc.stdout.strip() or "{}")
+            x, y = float(point.get("x", -1)), float(point.get("y", -1))
+        except (ValueError, json.JSONDecodeError):
+            return None
+        return None if x < 0 or y < 0 else (x, y)
+
+    if sys.platform == "win32":
+        import ctypes
+        from ctypes import wintypes
+        pt = wintypes.POINT()
+        if not ctypes.windll.user32.GetCursorPos(ctypes.byref(pt)):
+            return None
+        return float(pt.x), float(pt.y)
+
+    if shutil.which("xdotool") is None:
+        return None
+    proc = subprocess.run(["xdotool", "getmouselocation"], capture_output=True, text=True, timeout=3)
+    match = re.search(r"x:(\d+) y:(\d+)", proc.stdout)
+    if not match:
+        return None
+    return float(match.group(1)), float(match.group(2))
+
+
+def press_loop_platform_ok():
+    """Raise nothing — returns an error message or None before /start spawns."""
+    if sys.platform == "linux" and shutil.which("xdotool") is None:
+        return XDOTOOL_MISSING
+    return None
+
+
 class Bridge:
     def __init__(self):
         self.proc = None
@@ -139,21 +271,32 @@ class Bridge:
     def start(self, interval, count, click, tab, targets):
         with self.lock:
             self._stop_locked()
-            script = (
-                JXA_TEMPLATE
-                .replace("__N__", str(count))
-                .replace("__I__", str(interval))
-                .replace("__CE__", str(click))
-                .replace("__CT__", str(tab))
-                .replace("__TARGETS__", json.dumps(targets))
-            )
+            if sys.platform == "darwin":
+                script = (
+                    JXA_TEMPLATE
+                    .replace("__N__", str(count))
+                    .replace("__I__", str(interval))
+                    .replace("__CE__", str(click))
+                    .replace("__CT__", str(tab))
+                    .replace("__TARGETS__", json.dumps(targets))
+                )
+                argv = ["osascript", "-l", "JavaScript", "-e", script]
+            else:
+                payload = json.dumps({
+                    "interval": interval,
+                    "count": count,
+                    "click": click,
+                    "tab": tab,
+                    "targets": targets,
+                })
+                argv = [sys.executable, os.path.abspath(__file__), "--press-loop", payload]
             self.interval = interval
             self.count = count
             self.step_count = len(targets) if targets else 1
             self.period = interval + (len(targets) * 0.2 if targets else 0)
             self.started_at = time.time()
             self.proc = subprocess.Popen(
-                ["osascript", "-l", "JavaScript", "-e", script],
+                argv,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
                 start_new_session=True,
@@ -317,22 +460,14 @@ class Handler(BaseHTTPRequestHandler):
             self._json(200, bridge.status())
         elif self.path.startswith("/pick"):
             try:
-                proc = subprocess.run(
-                    ["osascript", "-l", "JavaScript", "-e", JXA_PICK],
-                    capture_output=True,
-                    text=True,
-                    timeout=3,
-                )
-                point = json.loads(proc.stdout.strip() or "{}")
-                x = float(point.get("x", -1))
-                y = float(point.get("y", -1))
-            except (OSError, ValueError, json.JSONDecodeError, subprocess.SubprocessError):
-                self._json(500, {"ok": False, "error": "could not read the cursor position"})
+                point = cursor_position()
+            except (OSError, ValueError, subprocess.SubprocessError):
+                point = None
+            if point is None:
+                error = XDOTOOL_MISSING if sys.platform == "linux" else "could not read the cursor position"
+                self._json(500, {"ok": False, "error": error})
                 return
-            if x < 0 or y < 0:
-                self._json(500, {"ok": False, "error": "could not read the cursor position"})
-                return
-            self._json(200, {"ok": True, "x": x, "y": y})
+            self._json(200, {"ok": True, "x": point[0], "y": point[1]})
         else:
             self._json(404, {"ok": False})
 
@@ -421,6 +556,10 @@ class Handler(BaseHTTPRequestHandler):
         if tab not in (0, 1):
             self._json(400, {"ok": False, "error": "tab must be 0 or 1"})
             return
+        platform_error = press_loop_platform_ok()
+        if platform_error:
+            self._json(500, {"ok": False, "error": platform_error})
+            return
         self._json(200, bridge.start(interval, count, click, tab, targets))
 
     def log_message(self, *args):  # keep the helper window quiet
@@ -432,6 +571,11 @@ if __name__ == "__main__":
         flag = sys.argv.index("--aim-overlay")
         timeout = int(sys.argv[flag + 1]) if len(sys.argv) > flag + 1 else 15
         run_aim_overlay(timeout)
+        raise SystemExit(0)
+    if "--press-loop" in sys.argv:
+        flag = sys.argv.index("--press-loop")
+        payload = json.loads(sys.argv[flag + 1]) if len(sys.argv) > flag + 1 else {}
+        run_press_loop(payload)
         raise SystemExit(0)
     try:
         server = ThreadingHTTPServer((HOST, PORT), Handler)
