@@ -617,17 +617,13 @@ function loadSettings() {
     merged.repeatCount = clamp(toInt(merged.repeatCount, DEFAULT_SETTINGS.repeatCount), COUNT_MIN, COUNT_MAX);
     merged.clickBeforeEnter = Boolean(merged.clickBeforeEnter);
     merged.tabBeforeEnter = merged.tabBeforeEnter !== undefined ? Boolean(merged.tabBeforeEnter) : DEFAULT_SETTINGS.tabBeforeEnter;
-    // Target list: lists start empty — only migrate a legacy picked
-    // coordinate (non-zero clickX/clickY) into entry #1.
-    if (Array.isArray(parsed.clickTargets)) {
-      merged.clickTargets = parsed.clickTargets
-        .map((p) => ({ x: clamp(toInt(p && p.x, 0), 0, XY_MAX), y: clamp(toInt(p && p.y, 0), 0, XY_MAX) }))
-        .slice(0, MAX_TARGETS);
-    } else {
-      const legacyX = clamp(toInt(parsed.clickX, 0), 0, XY_MAX);
-      const legacyY = clamp(toInt(parsed.clickY, 0), 0, XY_MAX);
-      merged.clickTargets = legacyX !== 0 || legacyY !== 0 ? [{ x: legacyX, y: legacyY }] : [];
-    }
+    // Target list: no targets by default — only a saved clickTargets list
+    // is honored; legacy clickX/clickY saves are ignored.
+    merged.clickTargets = Array.isArray(parsed.clickTargets)
+      ? parsed.clickTargets
+          .map((p) => ({ x: clamp(toInt(p && p.x, 0), 0, XY_MAX), y: clamp(toInt(p && p.y, 0), 0, XY_MAX) }))
+          .slice(0, MAX_TARGETS)
+      : [];
     if (!["infinite", "custom"].includes(merged.repeatMode)) merged.repeatMode = DEFAULT_SETTINGS.repeatMode;
     if (!["mac", "windows", "linux"].includes(merged.platform)) merged.platform = DEFAULT_SETTINGS.platform;
     if (!I18N_LANGS.includes(merged.lang)) merged.lang = DEFAULT_SETTINGS.lang;
