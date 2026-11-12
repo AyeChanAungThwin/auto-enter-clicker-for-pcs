@@ -852,6 +852,189 @@ kbd {
   outline-offset: 2px;
 }
 
+/* ---------- Press sequence: click toggle, XY target, Tab toggle ---------- */
+.switch-row-seq {
+  margin: 0.55rem 0 0;
+}
+
+.switch-row-seq .radio-hint {
+  display: block;
+  font-weight: 400;
+}
+
+.field-xy {
+  margin: 0.6rem 0 0;
+  padding-left: 1.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.field-xy label {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.xy-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.xy-row input[type="number"] {
+  width: 7rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: inherit;
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.xy-row input[type="number"]:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  outline: none;
+}
+
+.xy-row input[type="number"]:disabled {
+  opacity: 0.45;
+}
+
+.xy-axis {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.xy-hint {
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--text-muted);
+  margin-top: 0.15rem;
+}
+
+#pickBtn svg {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+#pickBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Aim mode — the reticle replaces the native cursor while picking */
+body.is-picking,
+body.is-picking * {
+  cursor: none !important;
+}
+
+/* Aiming reticle — full-screen guide lines intersecting at the cursor,
+   a targeting ring, and the capture countdown */
+#aimOverlay {
+  position: fixed;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  z-index: 10001;
+}
+
+#aimOverlay::before,
+#aimOverlay::after {
+  content: "";
+  position: absolute;
+  background: var(--accent-strong);
+  opacity: 0.45;
+}
+
+#aimOverlay::before {
+  left: -50vw;
+  top: -1px;
+  width: 100vw;
+  height: 2px;
+}
+
+#aimOverlay::after {
+  left: -1px;
+  top: -50vh;
+  width: 2px;
+  height: 100vh;
+}
+
+.aim-ring {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  border: 2px solid var(--accent-strong);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.aim-ring::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: var(--accent-strong);
+}
+
+.aim-label {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-sm);
+  background: var(--accent-strong);
+  color: #ffffff;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.field-xy input::-webkit-outer-spin-button,
+.field-xy input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.field-xy input {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* Click marker — brief pulse where the simulated click landed */
+.click-marker {
+  position: fixed;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border: 2px solid var(--accent-strong);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  animation: click-marker-pulse 0.45s ease-out forwards;
+}
+
+@keyframes click-marker-pulse {
+  from {
+    transform: scale(0.4);
+    opacity: 1;
+  }
+  to {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
 /* ---------- Event log ---------- */
 .log {
   flex: 1;

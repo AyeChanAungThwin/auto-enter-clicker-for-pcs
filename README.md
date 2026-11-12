@@ -28,9 +28,10 @@ Run it by pressing [here](https://ayechanaungthwin.github.io/auto-enter-clicker-
 
 [](#features)
 
-- Automated **Enter key press simulator** (keyCode 13) with a live countdown, adjustable interval from 1–9999 seconds, quick-adjust buttons (−1s, +1s, +10s, +60s), infinite or custom-count repeat modes, and a scrollable timestamped event log.
-- **System-wide pressing** — generates ready-to-run scripts for **macOS** (AppleScript / HID-level Terminal command), **Windows** (PowerShell `SendKeys`), and **Linux** (`xdotool`), updated live to match your interval and repeat settings, with one-click copy.
-- **Local bridge helper** (`bridge.py`) that lets the browser's Start button send real Enter presses to the frontmost app, with in-page simulation fallback, Web Audio click sound, light/dark mode, and localStorage-saved settings.
+- Automated **Enter key press simulator** (keyCode 13) with a live countdown, adjustable interval from 5–9999 seconds, quick-adjust buttons (−1s, +1s, +10s, +60s), infinite or custom-count repeat modes, and a scrollable timestamped event log.
+- **Press sequence per press: Click → Enter** — optionally fire a real mouse left-click at targetable screen coordinates (X, Y) right before each Enter, on every platform. With `bridge.py` running, press **Pick** and the whole PC screen is dimmed with a crosshair overlay: move the cursor anywhere on the screen and **left-click anywhere on the screen** to set the exact target (Esc cancels) — not restricted to the browser window. Without the bridge, an in-page cursor reticle captures the position after a short countdown instead. Coordinates can also be typed directly.
+- **System-wide pressing** — generates ready-to-run scripts for **macOS** (AppleScript / HID-level Terminal command), **Windows** (PowerShell `SendKeys`), and **Linux** (`xdotool`), updated live to match your interval, click, and repeat settings, with one-click copy.
+- **Local bridge helper** (`bridge.py`) that lets the browser's Start button send real clicks and Enter presses to the frontmost app, with in-page simulation fallback, Web Audio click sound, light/dark mode, and localStorage-saved settings.
 
 ## Electronics Engineer-cum-J2EE Backend Developer
 

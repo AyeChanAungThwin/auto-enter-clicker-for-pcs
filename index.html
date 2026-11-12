@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Automated Enter key press simulator with live countdown, event log, and a dynamic macOS AppleScript generator.">
+  <meta name="description" content="Automated Enter key press simulator with live countdown, event log, and a dynamic cross-platform script generator.">
   <title>Enter Key Clicker — Automated Press Simulator</title>
 
   <!-- Apply the saved theme before first paint to avoid a flash of the wrong theme -->
@@ -18,7 +18,7 @@
   </script>
 
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236366f1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='2' y='5' width='20' height='14' rx='3'/%3E%3Cpath d='M8 10v1.5a2 2 0 0 0 2 2h6'/%3E%3Cpath d='m13.5 11 2.5 2.5-2.5 2.5'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
 
@@ -70,16 +70,48 @@
       </div>
 
       <div class="field">
-        <label for="intervalInput">Interval (seconds, 1–9999)</label>
+        <label for="intervalInput">Interval (seconds, 5–9999)</label>
         <div class="stepper" role="group" aria-label="Quick adjust interval">
           <button type="button" class="chip" data-adjust="-1" aria-label="Decrease interval by 1 second">&minus;1s</button>
-          <input id="intervalInput" name="interval" type="number" inputmode="numeric" min="1" max="9999" step="1" value="5" autocomplete="off">
+          <input id="intervalInput" name="interval" type="number" inputmode="numeric" min="5" max="9999" step="1" value="5" autocomplete="off">
           <button type="button" class="chip" data-adjust="1" aria-label="Increase interval by 1 second">+1s</button>
           <button type="button" class="chip" data-adjust="10" aria-label="Increase interval by 10 seconds">+10s</button>
           <button type="button" class="chip" data-adjust="60" aria-label="Increase interval by 60 seconds">+60s</button>
         </div>
-        <p class="field-error" id="intervalError" role="alert" hidden>Interval must be between 1 and 9999 seconds.</p>
+        <p class="field-error" id="intervalError" role="alert" hidden>Interval must be between 5 and 9999 seconds.</p>
       </div>
+
+      <fieldset class="fieldset">
+        <legend>Press sequence</legend>
+
+        <label class="switch-row switch-row-seq" for="clickToggle">
+          <input id="clickToggle" type="checkbox">
+          <span class="switch" aria-hidden="true"></span>
+          <span class="switch-text">
+            <span class="radio-title">Mouse left-click first</span>
+            <span class="radio-hint">Tap the target screen coordinates before each press</span>
+          </span>
+        </label>
+
+        <div class="field field-xy" id="clickXYField">
+          <label for="clickXInput">Click target (screen coordinates)</label>
+          <div class="xy-row">
+            <span class="xy-axis" aria-hidden="true">X</span>
+            <input id="clickXInput" name="clickX" type="number" inputmode="numeric" min="0" max="99999" step="1" value="0" autocomplete="off">
+            <span class="xy-axis" aria-hidden="true">Y</span>
+            <input id="clickYInput" name="clickY" type="number" inputmode="numeric" min="0" max="99999" step="1" value="0" autocomplete="off">
+            <button id="pickBtn" type="button" class="btn btn-ghost btn-small" title="The bridge dims the whole PC screen with a crosshair overlay — click anywhere on the screen to set the target (Esc cancels). Without the bridge, an in-page reticle captures the cursor position after a short countdown.">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M5 3l14 8-6.5 1.5L9 19z"></path>
+              </svg>
+              Pick
+            </button>
+          </div>
+          <p class="xy-hint">Press <strong>Pick</strong> to target anywhere on the PC screen: with the bridge running, the whole screen is dimmed and a crosshair follows the cursor &mdash; <strong>left-click anywhere on the screen</strong> to set the target (Esc cancels). Without the bridge, an in-page reticle captures the cursor position after a short countdown.</p>
+          <p class="field-error" id="clickXYError" role="alert" hidden>Coordinates must be whole numbers between 0 and 99999.</p>
+        </div>
+
+      </fieldset>
 
       <fieldset class="fieldset">
         <legend>Repeat mode</legend>
@@ -250,6 +282,12 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-  <script src="script.js"></script>
+  <!-- Aiming reticle that follows the cursor while picking (no bridge) -->
+  <div id="aimOverlay" hidden aria-hidden="true">
+    <span class="aim-ring"></span>
+    <span class="aim-label" id="aimLabel">5…</span>
+  </div>
+
+  <script src="script.js?v=6"></script>
 </body>
 </html>

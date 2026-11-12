@@ -18,10 +18,11 @@ const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 /* --------------------------------------------------------------------------
  * Constants
  * ------------------------------------------------------------------------ */
-const INTERVAL_MIN = 1;
+const INTERVAL_MIN = 5;
 const INTERVAL_MAX = 9999;
 const COUNT_MIN = 1;
 const COUNT_MAX = 9999;
+const XY_MAX = 99999;
 const MAX_LOG_ENTRIES = 300;
 const STORAGE_KEY = "enterSim.settings";
 const BRIDGE_URL = "http://127.0.0.1:8791"; // managed by bridge.py in this folder
@@ -30,6 +31,9 @@ const DEFAULT_SETTINGS = {
   interval: 5,          // seconds between presses
   repeatMode: "infinite", // "infinite" | "custom"
   repeatCount: 10,      // presses per run when repeatMode === "custom"
+  clickBeforeEnter: false, // left-click at (clickX, clickY) before each press
+  clickX: 0,            // click target, screen X
+  clickY: 0,            // click target, screen Y
   sound: true,          // Web Audio click feedback
   theme: "dark",        // "dark" | "light"
   platform: "mac",      // "mac" | "windows" | "linux"
@@ -53,6 +57,13 @@ const el = {
   repeatRadios: $$('input[name="repeatMode"]'),
   repeatCountInput: $("#repeatCountInput"),
   countError: $("#countError"),
+  clickToggle: $("#clickToggle"),
+  clickXInput: $("#clickXInput"),
+  clickYInput: $("#clickYInput"),
+  clickXYError: $("#clickXYError"),
+  pickBtn: $("#pickBtn"),
+  aimOverlay: $("#aimOverlay"),
+  aimLabel: $("#aimLabel"),
   keycap: $("#keycap"),
   targetForm: $("#targetForm"),
   targetInput: $("#targetInput"),
@@ -90,6 +101,9 @@ function loadSettings() {
     const merged = { ...DEFAULT_SETTINGS, ...parsed };
     merged.interval = clamp(toInt(merged.interval, DEFAULT_SETTINGS.interval), INTERVAL_MIN, INTERVAL_MAX);
     merged.repeatCount = clamp(toInt(merged.repeatCount, DEFAULT_SETTINGS.repeatCount), COUNT_MIN, COUNT_MAX);
+    merged.clickBeforeEnter = Boolean(merged.clickBeforeEnter);
+    merged.clickX = clamp(toInt(merged.clickX, DEFAULT_SETTINGS.clickX), 0, XY_MAX);
+    merged.clickY = clamp(toInt(merged.clickY, DEFAULT_SETTINGS.clickY), 0, XY_MAX);
     if (!["infinite", "custom"].includes(merged.repeatMode)) merged.repeatMode = DEFAULT_SETTINGS.repeatMode;
     if (!["mac", "windows", "linux"].includes(merged.platform)) merged.platform = DEFAULT_SETTINGS.platform;
     return merged;
@@ -271,14 +285,57 @@ function bumpCounters() {
   el.cyclePresses.textContent = session.firedInCycle;
 }
 
+/** Describes the current press sequence for log/status messages. */
+function sequenceParts() {
+  const parts = [];
+  if (settings.clickBeforeEnter) parts.push(`Click(${settings.clickX},${settings.clickY})`);
+  parts.push("Enter");
+  return parts.join(" → ");
+}
+
+/**
+ * Simulates a left-click at (x, y) in page coordinates: a brief marker,
+ * then real mousedown / mouseup / click MouseEvents on the element there.
+ */
+function simulateClick(x, y) {
+  const marker = document.createElement("div");
+  marker.className = "click-marker";
+  marker.style.left = `${x}px`;
+  marker.style.top = `${y}px`;
+  document.body.appendChild(marker);
+  setTimeout(() => marker.remove(), 500);
+
+  const target = document.elementFromPoint(x, y) || document.body;
+  const init = {
+    clientX: x,
+    clientY: y,
+    button: 0,
+    bubbles: true,
+    cancelable: true,
+    composed: true,
+    view: window,
+  };
+  target.dispatchEvent(new MouseEvent("mousedown", init));
+  target.dispatchEvent(new MouseEvent("mouseup", init));
+  target.dispatchEvent(new MouseEvent("click", init));
+
+  if (target === el.targetInput || el.targetInput.contains(target)) {
+    el.targetInput.classList.add("is-event");
+    setTimeout(() => el.targetInput.classList.remove("is-event"), 200);
+  }
+}
+
 function firePress() {
   session.presses += 1;
   session.firedInCycle += 1;
 
-  // 1. Keycap animation + target-field flash.
+  // 1. Per-press sequence: optional click at the target point, then Enter.
+  if (settings.clickBeforeEnter) simulateClick(settings.clickX, settings.clickY);
+
+  // 2. Keycap animation + target-field flash.
   animateKeycap();
 
-  // 2. Fire a genuine Enter KeyboardEvent (key: "Enter", keyCode 13) on the field.
+  // 3. Fire a genuine Enter KeyboardEvent (key: "Enter", keyCode 13) on the field.
   const eventInit = {
     key: "Enter",
     code: "Enter",
@@ -290,11 +347,11 @@ function firePress() {
   el.targetInput.dispatchEvent(new KeyboardEvent("keydown", eventInit));
   el.targetInput.dispatchEvent(new KeyboardEvent("keyup", eventInit));
 
-  // 3. Sound + counters + log.
+  // 4. Sound + counters + log.
   playClick();
   bumpCounters();
 
-  addLogEntry(`Press <strong>#${session.presses}</strong> — Enter (keyCode 13) dispatched to test target`);
+  addLogEntry(`Press <strong>#${session.presses}</strong> — ${sequenceParts()} dispatched to test target`);
 }
 
 /* --------------------------------------------------------------------------
@@ -377,6 +434,9 @@ async function bridgeStartRequest() {
     body: JSON.stringify({
       interval: settings.interval,
       count: settings.repeatMode === "custom" ? settings.repeatCount : 0,
+      click: settings.clickBeforeEnter ? 1 : 0,
+      clickX: settings.clickX,
+      clickY: settings.clickY,
     }),
   });
   if (!res.ok) throw new Error(`bridge /start → ${res.status}`);
@@ -429,7 +489,7 @@ async function bridgePollTick() {
     animateKeycap();
     playClick();
     bumpCounters();
-    addLogEntry(`Press <strong>#${session.presses}</strong> — REAL Enter (bridge) sent to the frontmost app`);
+    addLogEntry(`Press <strong>#${session.presses}</strong> — ${sequenceParts()} (real events via bridge) sent to the frontmost app`);
   }
 
   // The helper finished a custom-count run on its own.
@@ -628,6 +688,184 @@ function applyRepeatMode(mode) {
 }
 
 /* --------------------------------------------------------------------------
+ * Click target inputs
+ * ------------------------------------------------------------------------ */
+/**
+ * Cursor picking — "Pick" first asks the bridge to open a full-screen aim
+ * overlay: a crosshair follows the cursor across the ENTIRE PC screen and a
+ * left-click anywhere sets the target (Esc cancels). Without the bridge
+ * (or if no GUI can be shown), it falls back to in-page aiming: a reticle
+ * tracks the cursor and the position is captured when the countdown ends.
+ */
+const AIM_SECONDS = 5;
+const aim = {
+  timerId: null,
+  onMove: null,
+  onDown: null,
+  onKey: null,
+  endedAt: 0,
+};
+
+async function pickPosition() {
+  if (aim.timerId !== null || aim.blocked) return; // already aiming
+  // The mousedown that just ended a pick also clicks this button.
+  if (Date.now() - aim.endedAt < 300) return;
+
+  const data = await probeBridge();
+  if (data && data.ok) {
+    // Screen-wide overlay — click anywhere on the PC screen.
+    aim.blocked = true;
+    showToast("Aim anywhere on the PC screen and left-click to set the target (Esc cancels)", 12000);
+    try {
+      const res = await fetch(`${BRIDGE_URL}/aim`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ timeout: 30 }),
+      });
+      const picked = await res.json();
+      if (picked && picked.ok) {
+        el.clickXInput.value = Math.round(picked.x);
+        el.clickYInput.value = Math.round(picked.y);
+        applyClickXYFromInput();
+        showToast(`Click target picked — (${el.clickXInput.value}, ${el.clickYInput.value}) (global screen coordinates)`);
+        return;
+      }
+      if (picked && picked.reason === "cancelled") {
+        showToast("Picking cancelled — click target unchanged");
+        return;
+      }
+      // "unavailable": fall back to in-page aiming below.
+    } catch {
+      /* fall back to in-page aiming */
+    } finally {
+      aim.blocked = false;
+    }
+  }
+  startInPageAim();
+}
+
+function startInPageAim() {
+  if (aim.timerId !== null) return;
+
+  let left = AIM_SECONDS;
+  document.body.classList.add("is-picking");
+  showAimReticle(window.innerWidth / 2, window.innerHeight / 2, `${left}…`);
+  showToast(`Bridge not available — aim on this page; capture in ${left}s · left-click to capture now · Esc cancels`, AIM_SECONDS * 1000 + 500);
+
+  aim.onMove = (e) => showAimReticle(e.clientX, e.clientY, `${left}…`);
+  aim.onDown = (e) => {
+    if (e.target && e.target.closest && e.target.closest("#pickBtn")) return;
+    endAim();
+    e.preventDefault();
+    e.stopPropagation();
+    setTargetFromPick(e);
+  };
+  aim.onKey = (e) => {
+    if (e.key !== "Escape") return;
+    e.preventDefault();
+    e.stopPropagation(); // keep the global Esc → toggle shortcut out
+    endAim();
+    showToast("Picking cancelled — click target unchanged");
+  };
+  document.addEventListener("mousemove", aim.onMove, true);
+  document.addEventListener("mousedown", aim.onDown, true);
+  document.addEventListener("keydown", aim.onKey, true);
+
+  aim.timerId = setInterval(() => {
+    left -= 1;
+    if (left > 0) {
+      el.aimLabel.textContent = `${left}…`;
+      return;
+    }
+    endAim();
+    setTargetFromPick(null);
+  }, 1000);
+}
+
+function showAimReticle(x, y, text) {
+  el.aimOverlay.hidden = false;
+  el.aimOverlay.style.left = `${x}px`;
+  el.aimOverlay.style.top = `${y}px`;
+  el.aimLabel.textContent = text;
+}
+
+function endAim() {
+  clearInterval(aim.timerId);
+  aim.timerId = null;
+  document.removeEventListener("mousemove", aim.onMove, true);
+  document.removeEventListener("mousedown", aim.onDown, true);
+  document.removeEventListener("keydown", aim.onKey, true);
+  aim.onMove = aim.onDown = aim.onKey = null;
+  el.aimOverlay.hidden = true;
+  document.body.classList.remove("is-picking");
+  aim.endedAt = Date.now();
+}
+
+/**
+ * Saves the click target from the in-page flow: fetches the bridge's global
+ * cursor read at the capture instant, or falls back to the click's page
+ * coordinates.
+ */
+async function setTargetFromPick(ev) {
+  try {
+    const res = await fetch(`${BRIDGE_URL}/pick`, { cache: "no-store" });
+    const picked = await res.json();
+    if (picked && picked.ok) {
+      el.clickXInput.value = Math.round(picked.x);
+      el.clickYInput.value = Math.round(picked.y);
+      applyClickXYFromInput();
+      showToast(`Click target picked — (${el.clickXInput.value}, ${el.clickYInput.value}) (global screen coordinates)`);
+      return;
+    }
+  } catch {
+    /* fall through */
+  }
+  if (ev) {
+    el.clickXInput.value = Math.round(ev.clientX);
+    el.clickYInput.value = Math.round(ev.clientY);
+    applyClickXYFromInput();
+    showToast(`Click target picked — (${el.clickXInput.value}, ${el.clickYInput.value}) (page coordinates)`);
+    return;
+  }
+  showToast("Bridge offline — aim and left-click on this page to set the target", 5000);
+}
+
+function applyClickXYFromInput() {
+  const x = Number.parseInt(el.clickXInput.value, 10);
+  const y = Number.parseInt(el.clickYInput.value, 10);
+  const invalid =
+    el.clickXInput.value === "" || !Number.isFinite(x) || x < 0 || x > XY_MAX ||
+    el.clickYInput.value === "" || !Number.isFinite(y) || y < 0 || y > XY_MAX;
+
+  if (invalid) {
+    showFieldError(el.clickXYError, true);
+    return false;
+  }
+
+  showFieldError(el.clickXYError, false);
+  settings.clickX = clamp(x, 0, XY_MAX);
+  settings.clickY = clamp(y, 0, XY_MAX);
+  el.clickXInput.value = settings.clickX;
+  el.clickYInput.value = settings.clickY;
+  saveSettings();
+  updateScript();
+  return true;
+}
+
+function applyClickEnabled(enabled) {
+  settings.clickBeforeEnter = enabled;
+  saveSettings();
+
+  // Coordinates are only editable while the click step is enabled.
+  el.clickXInput.disabled = !enabled;
+  el.clickYInput.disabled = !enabled;
+  el.pickBtn.disabled = !enabled;
+  if (!enabled) showFieldError(el.clickXYError, false);
+
+  updateScript();
+}
+
+/* --------------------------------------------------------------------------
  * Cross-platform script generation (macOS / Windows / Linux)
  * ------------------------------------------------------------------------ */
 const PLATFORM_NOTES = {
@@ -641,10 +879,15 @@ function buildAppleScript(interval, mode, count) {
   const header =
     `-- Generated by Enter Key Clicker on ${stamp}\n` +
     `-- Interval: ${interval}s | Mode: ${mode === "infinite" ? "infinite" : `${count} presses`}\n\n`;
+  const steps =
+    (settings.clickBeforeEnter
+      ? `\t\tclick at {${settings.clickX}, ${settings.clickY}} -- left-click at the target point\n`
+      : "") +
+    `\t\tkey code 36 -- Enter / Return (keyCode 13)\n`;
   const body =
     `${mode === "infinite" ? "repeat" : `repeat ${count} times`}\n` +
     `\ttell application "System Events"\n` +
-    `\t\tkey code 36 -- Enter / Return (keyCode 13)\n` +
+    steps +
     `\tend tell\n` +
     `\tdelay ${interval}\n` +
     `end repeat`;
@@ -662,21 +905,52 @@ function buildScript(platform, interval, mode, count) {
     return buildOsaCommand();
   }
 
+  const clickEnabled = settings.clickBeforeEnter;
+
   if (platform === "windows") {
     const comment = header.replace(/^--/gm, "#");
+    let prelude = "Add-Type -AssemblyName System.Windows.Forms\n";
+    if (clickEnabled) {
+      prelude +=
+        `Add-Type @"\n` +
+        `using System;\n` +
+        `using System.Runtime.InteropServices;\n` +
+        `public static class MouseTap {\n` +
+        `    [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);\n` +
+        `    [DllImport("user32.dll")] public static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint dwData, UIntPtr dwExtraInfo);\n` +
+        `}\n` +
+        `"@\n`;
+    }
+
+    const bodyLines = [];
+    if (clickEnabled) {
+      bodyLines.push(`    [MouseTap]::SetCursorPos(${settings.clickX}, ${settings.clickY})`);
+      bodyLines.push("    Start-Sleep -Milliseconds 50");
+      bodyLines.push("    [MouseTap]::mouse_event(2, 0, 0, 0, [UIntPtr]::Zero)  # left button down");
+      bodyLines.push("    Start-Sleep -Milliseconds 50");
+      bodyLines.push("    [MouseTap]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero)  # left button up");
+      bodyLines.push("    Start-Sleep -Milliseconds 50");
+    }
+    bodyLines.push('    [System.Windows.Forms.SendKeys]::SendWait("{ENTER}")');
+
+    const body = bodyLines.join("\n");
     const loop =
       mode === "infinite"
-        ? `while ($true) {\n    [System.Windows.Forms.SendKeys]::SendWait("{ENTER}")\n    Start-Sleep -Seconds ${interval}\n}`
-        : `for ($i = 1; $i -le ${count}; $i++) {\n    [System.Windows.Forms.SendKeys]::SendWait("{ENTER}")\n    Start-Sleep -Seconds ${interval}\n}`;
-    return `${comment}Add-Type -AssemblyName System.Windows.Forms\n\n${loop}\n`;
+        ? `while ($true) {\n${body}\n    Start-Sleep -Seconds ${interval}\n}`
+        : `for ($i = 1; $i -le ${count}; $i++) {\n${body}\n    Start-Sleep -Seconds ${interval}\n}`;
+    return `${comment}${prelude}\n${loop}\n`;
   }
 
   // linux — bash + xdotool
   const comment = header.replace(/^--/gm, "#");
+  const stepLines = [];
+  if (clickEnabled) stepLines.push(`  xdotool mousemove ${settings.clickX} ${settings.clickY} click 1`);
+  stepLines.push("  xdotool key Return");
+  const body = stepLines.join("\n");
   const loop =
     mode === "infinite"
-      ? `while true; do\n  xdotool key Return\n  sleep ${interval}\ndone`
-      : `for i in $(seq 1 ${count}); do\n  xdotool key Return\n  sleep ${interval}\ndone`;
+      ? `while true; do\n${body}\n  sleep ${interval}\ndone`
+      : `for i in $(seq 1 ${count}); do\n${body}\n  sleep ${interval}\ndone`;
   return `${comment}${loop}\n`;
 }
 
@@ -686,7 +960,7 @@ function updateScript() {
 
   // Primary block — paste-and-run for Terminal / PowerShell / bash.
   el.scriptCode.textContent = buildScript(platform, interval, repeatMode, repeatCount);
-  el.platformNote.textContent = PLATFORM_NOTES[platform];
+  el.platformNote.textContent = `${PLATFORM_NOTES[platform]} Sequence per press: ${sequenceParts()}.`;
 
   if (isMac) {
     // Show the Script Editor flavour as a clearly separated secondary option.
@@ -711,22 +985,42 @@ function updateScript() {
  *    hardware HID system, so the event also carries the keyboard's own state.
  *  - kCGHIDEventTap (0): posts at the lowest event tap userland can reach.
  *  - Explicit keydown + 20ms hold + keyup mimics a human key press.
+ *  - Optional pre-press steps: left-click at (X, Y) via CGEventCreateMouseEvent
+ *    (types 5/1/2 = moved / left-down / left-up) before the Enter keyTap.
  */
 function buildOsaCommand() {
   const n = settings.repeatMode === "infinite" ? 0 : settings.repeatCount; // 0 = infinite
   const i = settings.interval;
+  const click = settings.clickBeforeEnter ? 1 : 0;
   return `osascript -l JavaScript -e '
 ObjC.import("CoreGraphics");
 ObjC.import("Foundation");
 // N = presses (0 = run forever); I = seconds between presses
+// Sequence per press: Click(X, Y) -> Enter (the click step is optional)
 var N = ${n}, I = ${i};
+var CLICK = ${click}, X = ${settings.clickX}, Y = ${settings.clickY};
 var src = $.CGEventSourceCreate(1);
-function press() {
-  var d = $.CGEventCreateKeyboardEvent(src, 36, true);
+function clickXY() {
+  var mv = $.CGEventCreateMouseEvent(src, 5, {x: X, y: Y}, 0);
+  $.CGEventPost(0, mv);
+  $.NSThread.sleepForTimeInterval(0.02);
+  var d = $.CGEventCreateMouseEvent(src, 1, {x: X, y: Y}, 0);
   $.CGEventPost(0, d);
   $.NSThread.sleepForTimeInterval(0.02);
-  var u = $.CGEventCreateKeyboardEvent(src, 36, false);
+  var u = $.CGEventCreateMouseEvent(src, 2, {x: X, y: Y}, 0);
   $.CGEventPost(0, u);
+  $.NSThread.sleepForTimeInterval(0.05);
+}
+function keyTap(code) {
+  var d = $.CGEventCreateKeyboardEvent(src, code, true);
+  $.CGEventPost(0, d);
+  $.NSThread.sleepForTimeInterval(0.02);
+  var u = $.CGEventCreateKeyboardEvent(src, code, false);
+  $.CGEventPost(0, u);
+}
+function press() {
+  if (CLICK === 1) clickXY();
+  keyTap(36); // Enter / Return (keyCode 13)
 }
 var i = 0;
 while (N === 0 || i < N) {
@@ -885,6 +1179,28 @@ el.repeatRadios.forEach((radio) => {
   });
 });
 
+el.clickToggle.addEventListener("change", () => applyClickEnabled(el.clickToggle.checked));
+el.pickBtn.addEventListener("click", pickPosition);
+
+[el.clickXInput, el.clickYInput].forEach((input) => {
+  input.addEventListener("change", applyClickXYFromInput);
+  input.addEventListener("input", () => {
+    const both = [el.clickXInput, el.clickYInput];
+    const invalid = both.some((i) => {
+      const v = Number.parseInt(i.value, 10);
+      return i.value === "" || !Number.isFinite(v) || v < 0 || v > XY_MAX;
+    });
+    showFieldError(el.clickXYError, invalid);
+    if (!invalid) applyClickXYFromInput();
+  });
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      e.currentTarget.blur();
+    }
+  });
+});
+
 el.repeatCountInput.addEventListener("change", applyRepeatCountFromInput);
 el.repeatCountInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") {
@@ -962,8 +1278,14 @@ function init() {
     el.repeatCountInput.disabled = settings.repeatMode !== "custom";
   }
 
-  // Sound + platform
+  // Sound + sequence + platform
   el.soundToggle.checked = settings.sound;
+  el.clickToggle.checked = settings.clickBeforeEnter;
+  el.clickXInput.value = settings.clickX;
+  el.clickYInput.value = settings.clickY;
+  el.clickXInput.disabled = !settings.clickBeforeEnter;
+  el.clickYInput.disabled = !settings.clickBeforeEnter;
+  el.pickBtn.disabled = !settings.clickBeforeEnter;
   selectPlatform(settings.platform);
   updateScript();
 
