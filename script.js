@@ -112,7 +112,7 @@ const I18N = {
     start_bridge_title: "For Windows, macOS and Linux — a toggle: when the bridge is offline this starts it silently (no window; the green badge is the sign); online, clicking stops the helper. Register first: Windows — run the bridge once; macOS — run enable-bridge-launch-mac.command once (allow the browser to open Enter Key Clicker Bridge when asked); Linux — run enable-bridge-launch-linux.sh once.",
     bridge_launching_toast: "Launching the bridge — if the browser asks, allow opening Enter Key Clicker Bridge",
     bridge_started_toast: "Bridge is online again — real pressing is available",
-    bridge_failed_toast: "Bridge did not come online — install Python on this PC, allow the browser dialog, then click Start bridge again",
+    bridge_failed_toast: "Bridge did not come online — if the browser asked to open Enter Key Clicker Bridge, press Allow; if not, allow it in the site's External-handlers permission, run {script}, then click Start bridge again",
     status_idle: "Idle",
     status_local: "Running (local)",
     status_real: "Running (real keys)",
@@ -233,7 +233,7 @@ const I18N = {
     start_bridge_title: "Windows, macOS နှင့် Linux အတွက် — toggle ခလုတ်- bridge အလုပ်မလုပ်လျှင် window မပါဘဲ တိတ်တဆိတ် စတင်သည် (အစိမ်းရောင် badge က ချိတ်ဆက်ကြောင်း ပြသည်)၊ လည်ပတ်နေလျှင် နှိပ်၍ ရပ်သည်။ အရင် မှတ်ပုံတင်ပါ- Windows — bridge တစ်ကြိမ် လည်ပတ်ရုံပါ။ macOS — enable-bridge-launch-mac.command ကို တစ်ကြိမ် လည်ပတ်ပါ (browser မေးလျှင် Enter Key Clicker Bridge ဖွင့်ခွင့် ပြုပါ)။ Linux — enable-bridge-launch-linux.sh ကို တစ်ကြိမ် လည်ပတ်ပါ။",
     bridge_launching_toast: "ဘရစ်ဇ် စတင်နေသည် — browser မေးလျှင် Enter Key Clicker Bridge ကို ဖွင့်ခွင့်ပြုပါ",
     bridge_started_toast: "ဘရစ်ဇ် ပြန်လည်ချိတ်ဆက်ပြီး — စစ်မှန်ခလုတ်များ နှိပ်နိုင်ပါပြီ",
-    bridge_failed_toast: "ဘရစ်ဇ် မလာပါ — ဤ PC တွင် Python ကို ထည့်သွင်းပါ၊ browser dialog ကို ခွင့်ပြုပြီး Start bridge ကို ထပ်နှိပ်ပါ",
+    bridge_failed_toast: "ဘရစ်ဇ် မလာပါ — browser က Enter Key Clicker Bridge ဖွင့်ခွင့် မေးလျှင် Allow နှိပ်ပါ၊ မမေးလျှင် site ၏ External-handlers permission တွင် ခွင့်ပြုပါ၊ {script} ကို လည်ပတ်ပြီး Start bridge ကို ထပ်နှိပ်ပါ",
     status_idle: "အနားယူနေသည်",
     status_local: "လည်ပတ်နေသည် (စာမျက်နှာအတွင်း)",
     status_real: "လည်ပတ်နေသည် (စစ်မှန်ခလုတ်များ)",
@@ -354,7 +354,7 @@ const I18N = {
     start_bridge_title: "Windows、macOS 和 Linux — 开关按钮：bridge 未运行时点击会静默启动它，不显示任何窗口，旁边徽标变绿即表示成功；运行中时点击会停止 bridge。先注册：Windows — 运行一次 bridge；macOS — 运行一次 enable-bridge-launch-mac.command（浏览器询问时允许打开 Enter Key Clicker Bridge）；Linux — 运行一次 enable-bridge-launch-linux.sh。",
     bridge_launching_toast: "正在启动 bridge — 如浏览器弹出询问，请允许打开 Enter Key Clicker Bridge",
     bridge_started_toast: "Bridge 已恢复在线 — 可以发送真实按键",
-    bridge_failed_toast: "Bridge 未上线 — 请在本机安装 Python，允许浏览器弹窗后再点击“启动 Bridge”",
+    bridge_failed_toast: "Bridge 未上线 — 若浏览器询问是否打开 Enter Key Clicker Bridge 请按“允许”；若未询问，请在网站 External handlers 权限中允许，运行 {script} 后再点击“启动 Bridge”",
     status_idle: "空闲",
     status_local: "运行中（模拟）",
     status_real: "运行中（真实按键）",
@@ -475,7 +475,7 @@ const I18N = {
     start_bridge_title: "Windows, macOS, Linux — 토글 버튼: bridge가 꺼져 있을 때 클릭하면 창 없이 조용히 시작되고(배지가 초록색으로 바뀌면 성공), 실행 중일 때 클릭하면 bridge가 중지됩니다. 먼저 등록하세요: Windows — bridge를 한 번 실행; macOS — enable-bridge-launch-mac.command를 한 번 실행(브라우저가 묻으면 Enter Key Clicker Bridge 열기를 허용); Linux — enable-bridge-launch-linux.sh를 한 번 실행.",
     bridge_launching_toast: "브리지를 시작하는 중 — 브라우저가 묻는다면 Enter Key Clicker Bridge 열기를 허용하세요",
     bridge_started_toast: "브리지가 다시 온라인 상태입니다 — 실제 키 입력이 가능합니다",
-    bridge_failed_toast: "브리지가 온라인이 되지 않았습니다 — 이 PC에 Python을 설치하고 브라우저 대화상자를 허용한 뒤 '브리지 시작'을 다시 누르세요",
+    bridge_failed_toast: "브리지가 온라인이 되지 않았습니다 — 브라우저가 Enter Key Clicker Bridge 열기를 물으면 허용을 누르세요. 묻지 않으면 사이트의 External handlers 권한에서 허용하고 {script}를 실행한 뒤 '브리지 시작'을 다시 누르세요",
     status_idle: "대기 중",
     status_local: "실행 중(페이지 내)",
     status_real: "실행 중(실제 키)",
@@ -1168,7 +1168,9 @@ function launchBridge(auto) {
   if (auto && bridgeLaunchTimerId !== null) return;
   clearInterval(bridgeLaunchTimerId);
   bridgeLaunchTimerId = null;
-  el.startBridgeBtn.disabled = true;
+  // The button stays ENABLED during the wait: until the user grants the
+  // one-time browser permission, the page-load auto-attempt fires into the
+  // void — a disabled button would then swallow the first real click too.
   if (!auto) showToast(t("bridge_launching_toast"), 10000);
 
   fireBridgeProtocol();
@@ -1180,7 +1182,6 @@ function launchBridge(auto) {
     if (data && data.ok) {
       clearInterval(bridgeLaunchTimerId);
       bridgeLaunchTimerId = null;
-      el.startBridgeBtn.disabled = false;
       // probeBridge ran while the launch guard was still set, so its label
       // update was skipped — repaint now that the attempt is settled.
       updateStartBridgeBtn();
@@ -1191,7 +1192,6 @@ function launchBridge(auto) {
     if (waited >= BRIDGE_LAUNCH_WAIT_MS) {
       clearInterval(bridgeLaunchTimerId);
       bridgeLaunchTimerId = null;
-      el.startBridgeBtn.disabled = false;
       updateStartBridgeBtn();
       addSystemLog(t("bridge_failed_toast", { script: bridgeLaunchScriptName() }));
       if (!auto) {
