@@ -106,6 +106,13 @@ const I18N = {
     bridge_connected: "Bridge: connected",
     bridge_offline: "Bridge: offline",
     bridge_pressing: "Bridge: pressing",
+    autostart_on: "Auto-start: on",
+    autostart_off: "Auto-start: off",
+    autostart_title_on: "The bridge starts by itself at every login — click to remove that",
+    autostart_title_off: "Make the bridge start by itself at every login on this PC",
+    autostart_enabled_toast: "Auto-start enabled — the bridge starts by itself at every login",
+    autostart_disabled_toast: "Auto-start removed",
+    autostart_fail_toast: "Could not change auto-start on this PC",
     status_idle: "Idle",
     status_local: "Running (local)",
     status_real: "Running (real keys)",
@@ -220,6 +227,13 @@ const I18N = {
     bridge_connected: "Bridge: ချိတ်ဆက်ထားသည်",
     bridge_offline: "Bridge: အလုပ်မလုပ်ပါ",
     bridge_pressing: "Bridge: နှိပ်နေသည်",
+    autostart_on: "အလိုအလျောက် စတင်: ဖွင့်ထားသည်",
+    autostart_off: "အလိုအလျောက် စတင်: ပိတ်ထားသည်",
+    autostart_title_on: "ဘရစ်ဇ်သည် ၀င်ရောက်တိုင်း အလိုအလျောက် စတင်ပါသည် — ဖယ်ရှားရန် နှိပ်ပါ",
+    autostart_title_off: "ဤ PC တွင် ၀င်ရောက်တိုင်း ဘရစ်ဇ်ကို အလိုအလျောက် စတင်စေပါ",
+    autostart_enabled_toast: "အလိုအလျောက် စတင်ခြင်း ဖွင့်ပြီး — ၀င်ရောက်တိုင်း ဘရစ်ဇ်သည် အလိုအလျောက် စတင်ပါမည်",
+    autostart_disabled_toast: "အလိုအလျောက် စတင်ခြင်း ဖယ်ရှားပြီး",
+    autostart_fail_toast: "အလိုအလျောက် စတင်ခြင်း ပြောင်းလဲ၍ မရပါ",
     status_idle: "အနားယူနေသည်",
     status_local: "လည်ပတ်နေသည် (စာမျက်နှာအတွင်း)",
     status_real: "လည်ပတ်နေသည် (စစ်မှန်ခလုတ်များ)",
@@ -334,6 +348,13 @@ const I18N = {
     bridge_connected: "Bridge：已连接",
     bridge_offline: "Bridge：离线",
     bridge_pressing: "Bridge：按键中",
+    autostart_on: "开机自启：已开启",
+    autostart_off: "开机自启：未开启",
+    autostart_title_on: "bridge 已设置为每次登录自动启动 — 点击移除",
+    autostart_title_off: "让 bridge 在这台电脑每次登录时自动启动",
+    autostart_enabled_toast: "已开启开机自启 — 每次登录都会在后台启动 bridge",
+    autostart_disabled_toast: "已移除开机自启",
+    autostart_fail_toast: "无法更改这台电脑上的开机自启设置",
     status_idle: "空闲",
     status_local: "运行中（模拟）",
     status_real: "运行中（真实按键）",
@@ -448,6 +469,13 @@ const I18N = {
     bridge_connected: "Bridge: 연결됨",
     bridge_offline: "Bridge: 오프라인",
     bridge_pressing: "Bridge: 입력 중",
+    autostart_on: "자동 시작: 켜짐",
+    autostart_off: "자동 시작: 꺼짐",
+    autostart_title_on: "bridge가 매 로그인마다 자동 시작되고 있습니다 — 클릭하여 제거",
+    autostart_title_off: "이 PC에서 로그인할 때마다 bridge가 자동으로 시작되도록 설정",
+    autostart_enabled_toast: "자동 시작이 설정되었습니다 — 로그인마다 bridge가 백그라운드에서 시작됩니다",
+    autostart_disabled_toast: "자동 시작이 제거되었습니다",
+    autostart_fail_toast: "이 PC에서 자동 시작 설정을 변경할 수 없습니다",
     status_idle: "대기 중",
     status_local: "실행 중(페이지 내)",
     status_real: "실행 중(실제 키)",
@@ -547,6 +575,7 @@ function applyLanguage() {
     el.statusText.textContent = t("status_idle");
   }
   el.bridgeBadge.textContent = t(bridge.badgeKey || "bridge_offline");
+  if (bridge.autostart !== null) updateAutoStartBtn(bridge.autostart); // re-localize the toggle
   updateScript();
 }
 
@@ -583,6 +612,8 @@ const el = {
   targetInput: $("#targetInput"),
   soundToggle: $("#soundToggle"),
   bridgeBadge: $("#bridgeBadge"),
+  autoStartBtn: $("#autoStartBtn"),
+  autoStartLabel: $("#autoStartLabel"),
   totalPresses: $("#totalPresses"),
   cyclePresses: $("#cyclePresses"),
   statusText: $("#statusText"),
@@ -669,6 +700,7 @@ const bridge = {
   lastPresses: 0,
   startedAt: 0,
   badgeKey: "bridge_offline", // i18n key of the current badge label
+  autostart: null, // null = unknown/offline — the button stays hidden
 };
 
 /* --------------------------------------------------------------------------
@@ -1008,6 +1040,15 @@ function setBridgeBadge(key, cssClass) {
   if (cssClass) el.bridgeBadge.classList.add(cssClass);
 }
 
+function updateAutoStartBtn(enabled) {
+  bridge.autostart = enabled;
+  el.autoStartBtn.hidden = false;
+  el.autoStartBtn.disabled = false;
+  el.autoStartLabel.textContent = t(enabled ? "autostart_on" : "autostart_off");
+  el.autoStartBtn.classList.toggle("is-on", enabled);
+  el.autoStartBtn.title = t(enabled ? "autostart_title_on" : "autostart_title_off");
+}
+
 async function probeBridge() {
   let data = null;
   try {
@@ -1018,8 +1059,16 @@ async function probeBridge() {
   }
   if (data && data.ok) {
     setBridgeBadge(data.running ? "bridge_pressing" : "bridge_connected", "is-on");
+    if (typeof data.autostart === "boolean") {
+      updateAutoStartBtn(data.autostart);
+    } else {
+      bridge.autostart = null;
+      el.autoStartBtn.hidden = true; // bridge predates the /autostart endpoint
+    }
   } else {
     setBridgeBadge("bridge_offline", "is-off");
+    bridge.autostart = null;
+    el.autoStartBtn.hidden = true;
   }
   return data;
 }
@@ -2025,6 +2074,32 @@ el.repeatCountInput.addEventListener("keydown", (e) => {
 });
 
 el.clearLogBtn.addEventListener("click", clearLog);
+
+// Auto-start: asks the running bridge to register/remove start-at-login for
+// whatever OS it runs on (Windows registry / macOS LaunchAgent / Linux XDG).
+el.autoStartBtn.addEventListener("click", async (e) => {
+  e.currentTarget.blur();
+  const enable = bridge.autostart === null ? true : !bridge.autostart;
+  el.autoStartBtn.disabled = true;
+  try {
+    const res = await fetch(`${BRIDGE_URL}/autostart`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enable }),
+    });
+    const data = await res.json();
+    if (data && data.ok) {
+      updateAutoStartBtn(data.enabled);
+      showToast(t(data.enabled ? "autostart_enabled_toast" : "autostart_disabled_toast"));
+      addSystemLog(data.enabled ? t("autostart_enabled_toast") : t("autostart_disabled_toast"));
+    } else {
+      showToast(t("autostart_fail_toast"));
+    }
+  } catch {
+    showToast(t("autostart_fail_toast"));
+  }
+  el.autoStartBtn.disabled = false;
+});
 
 el.soundToggle.addEventListener("change", () => {
   settings.sound = el.soundToggle.checked;

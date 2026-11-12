@@ -18,7 +18,7 @@
   </script>
 
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236366f1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='2' y='5' width='20' height='14' rx='3'/%3E%3Cpath d='M8 10v1.5a2 2 0 0 0 2 2h6'/%3E%3Cpath d='m13.5 11 2.5 2.5-2.5 2.5'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="style.css?v=11">
+  <link rel="stylesheet" href="style.css?v=12">
 </head>
 <body>
 
@@ -70,7 +70,15 @@
     <section class="card card-controls" aria-labelledby="controls-heading">
       <div class="card-head-row">
         <h2 id="controls-heading" data-i18n="controls">Controls</h2>
-        <span id="bridgeBadge" class="bridge-badge" data-i18n-title="bridge_badge_title" title="Run `python3 bridge.py` in this folder (double-click start-bridge.command on macOS, start-bridge.bat on Windows) so the Start button presses real Enter in the frontmost app. Windows needs no permission; macOS must allow it: System Settings → Privacy & Security → Accessibility → add the app running the bridge.">Bridge: checking…</span>
+        <div class="bridge-ctl">
+          <button id="autoStartBtn" type="button" class="btn btn-ghost btn-small" hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M13 2 3 14h8l-2 8 10-12h-8z"></path>
+            </svg>
+            <span id="autoStartLabel">Auto-start</span>
+          </button>
+          <span id="bridgeBadge" class="bridge-badge" data-i18n-title="bridge_badge_title" title="Run `python3 bridge.py` in this folder (double-click start-bridge.command on macOS, start-bridge.bat on Windows) so the Start button presses real Enter in the frontmost app. Windows needs no permission; macOS must allow it: System Settings → Privacy & Security → Accessibility → add the app running the bridge.">Bridge: checking…</span>
+        </div>
       </div>
 
       <div class="countdown-panel">
@@ -312,6 +320,6 @@
     <span class="aim-label" id="aimLabel">5…</span>
   </div>
 
-  <script src="script.js?v=11"></script>
+  <script src="script.js?v=12"></script>
 </body>
 </html>

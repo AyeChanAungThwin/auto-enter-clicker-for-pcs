@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s -m 3 http://127.0.0.1:8791/ping)",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(echo \" EXIT:$?\")",
+      "Bash(curl -s -m 12 -X POST http://127.0.0.1:8791/aim -d '{\"timeout\": 5}' -H \"Content-Type: application/json\")",
+      "Bash(cmd //c \"cd\")",
+      "Bash(cmd //c dir /b)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://ayechanaungthwin.github.io/auto-enter-clicker-for-pcs/\")",
+      "Bash(curl -s \"https://ayechanaungthwin.github.io/auto-enter-clicker-for-pcs/script.js\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} %{size_download}\\\\n\" \"https://ayechanaungthwin.github.io/auto-enter-clicker-for-pcs/bridge.py\")"
+    ]
+  }
+}

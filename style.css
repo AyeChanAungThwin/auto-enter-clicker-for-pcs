@@ -762,7 +762,18 @@ kbd {
   color: var(--text-muted);
 }
 
-/* ---------- Bridge badge ---------- */
+/* ---------- Bridge badge + auto-start ---------- */
+.bridge-ctl {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+#autoStartBtn.is-on {
+  color: var(--success);
+  border-color: var(--success);
+}
+
 .bridge-badge {
   display: inline-flex;
   align-items: center;

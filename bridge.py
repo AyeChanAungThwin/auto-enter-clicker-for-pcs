@@ -26,6 +26,10 @@ Endpoints:
                  — each cycle fires the whole list 0.2s apart; the cycle
                  between bursts is interval + 0.2s × entries}
   POST /stop    -> stops any running press loop
+  GET  /autostart -> {"ok":true,"enabled":bool,"platform":str}
+  POST /autostart {"enable": bool} -> registers/unregisters start-at-login for
+                 the OS the bridge runs on (Windows: HKCU Run key via pythonw,
+                 macOS: LaunchAgent plist, Linux: XDG autostart .desktop)
 """
 import json
 import os
@@ -432,6 +436,129 @@ def run_aim_overlay(timeout):
 aim_overlay = AimOverlay()
 
 
+# ---------------------------------------------------------------------------
+# Start-at-login — registers bridge.py for the OS the bridge runs on, so the
+# user does not have to double-click a launcher after every reboot.
+#   Windows: HKCU\...\Run value -> pythonw.exe bridge.py (no console window)
+#   macOS:   LaunchAgent plist in ~/Library/LaunchAgents + launchctl load
+#   Linux:   XDG autostart .desktop in ~/.config/autostart
+# Only the stdlib is used (winreg / plistlib / shlex).
+# ---------------------------------------------------------------------------
+
+AUTOSTART_VALUE_NAME = "EnterKeyClickerBridge"
+MAC_PLIST_LABEL = "com.enterkeyclicker.bridge"
+
+
+def _mac_plist_path():
+    return os.path.join(
+        os.path.expanduser("~"), "Library", "LaunchAgents", MAC_PLIST_LABEL + ".plist"
+    )
+
+
+def _linux_desktop_path():
+    config = os.environ.get("XDG_CONFIG_HOME") or os.path.join(os.path.expanduser("~"), ".config")
+    return os.path.join(config, "autostart", "enterkeyclicker-bridge.desktop")
+
+
+def _autostart_enabled():
+    try:
+        if sys.platform == "win32":
+            import winreg
+            with winreg.OpenKey(
+                winreg.HKEY_CURRENT_USER,
+                r"Software\Microsoft\Windows\CurrentVersion\Run",
+                0,
+                winreg.KEY_READ,
+            ) as key:
+                value = winreg.QueryValueEx(key, AUTOSTART_VALUE_NAME)[0]
+            script_in_entry = "bridge.py" in str(value)
+        elif sys.platform == "darwin":
+            script_in_entry = os.path.exists(_mac_plist_path())
+        else:
+            script_in_entry = os.path.exists(_linux_desktop_path())
+        return script_in_entry
+    except OSError:
+        return False
+
+
+def _autostart_windows(enable):
+    import winreg
+    run_key = r"Software\Microsoft\Windows\CurrentVersion\Run"
+    with winreg.OpenKey(
+        winreg.HKEY_CURRENT_USER, run_key, 0, winreg.KEY_SET_VALUE
+    ) as key:
+        if not enable:
+            try:
+                winreg.DeleteValue(key, AUTOSTART_VALUE_NAME)
+            except FileNotFoundError:
+                pass
+            return True
+        launcher = os.path.join(os.path.dirname(sys.executable), "pythonw.exe")
+        if not os.path.exists(launcher):
+            launcher = sys.executable
+        entry = '"%s" "%s"' % (launcher, os.path.abspath(__file__))
+        winreg.SetValueEx(key, AUTOSTART_VALUE_NAME, 0, winreg.REG_SZ, entry)
+    return True
+
+
+def _autostart_macos(enable):
+    import plistlib
+    path = _mac_plist_path()
+    if not enable:
+        subprocess.run(["launchctl", "unload", path], capture_output=True, check=False)
+        try:
+            os.remove(path)
+        except FileNotFoundError:
+            pass
+        return True
+    payload = {
+        "Label": MAC_PLIST_LABEL,
+        "ProgramArguments": [sys.executable, os.path.abspath(__file__)],
+        "RunAtLoad": True,
+        "KeepAlive": False,
+    }
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "wb") as fh:
+        plistlib.dump(payload, fh)
+    subprocess.run(["launchctl", "load", path], capture_output=True, check=False)
+    return True
+
+
+def _autostart_linux(enable):
+    import shlex
+    path = _linux_desktop_path()
+    if not enable:
+        try:
+            os.remove(path)
+        except FileNotFoundError:
+            pass
+        return True
+    entry = "\n".join([
+        "[Desktop Entry]",
+        "Type=Application",
+        "Name=Enter Key Clicker bridge",
+        "Comment=Local helper that sends real Enter presses (port 8791)",
+        "Exec=%s" % " ".join(shlex.quote(a) for a in [sys.executable, os.path.abspath(__file__)]),
+        "X-GNOME-Autostart-enabled=true",
+    ])
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(entry + "\n")
+    return True
+
+
+def autostart(enable):
+    """Register or unregister start-at-login; returns True on success."""
+    try:
+        if sys.platform == "win32":
+            return _autostart_windows(enable)
+        if sys.platform == "darwin":
+            return _autostart_macos(enable)
+        return _autostart_linux(enable)
+    except OSError:
+        return False
+
+
 class Handler(BaseHTTPRequestHandler):
     def _cors(self):
         self.send_header("Access-Control-Allow-Origin", "*")
@@ -457,7 +584,9 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path.startswith("/ping"):
-            self._json(200, bridge.status())
+            status = bridge.status()
+            status["autostart"] = _autostart_enabled()
+            self._json(200, status)
         elif self.path.startswith("/pick"):
             try:
                 point = cursor_position()
@@ -468,6 +597,12 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(500, {"ok": False, "error": error})
                 return
             self._json(200, {"ok": True, "x": point[0], "y": point[1]})
+        elif self.path.startswith("/autostart"):
+            self._json(200, {
+                "ok": True,
+                "enabled": _autostart_enabled(),
+                "platform": sys.platform,
+            })
         else:
             self._json(404, {"ok": False})
 
@@ -481,7 +616,16 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(400, {"ok": False, "error": "invalid JSON"})
                 return
 
-        if self.path.startswith("/aim"):
+        if self.path.startswith("/autostart"):
+            enable = body.get("enable")
+            if not isinstance(enable, bool):
+                self._json(400, {"ok": False, "error": "enable must be true or false"})
+                return
+            if not autostart(enable):
+                self._json(500, {"ok": False, "error": "could not change the autostart registration"})
+                return
+            self._json(200, {"ok": True, "enabled": _autostart_enabled()})
+        elif self.path.startswith("/aim"):
             try:
                 timeout = int(body.get("timeout", 15))
             except (TypeError, ValueError):
