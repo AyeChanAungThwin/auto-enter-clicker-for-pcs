@@ -241,7 +241,11 @@ def _running_translated():
     """True when this python is x86_64 under Rosetta — there HIServices
     calls through libffi SIGSEGV (uncatchable), so never touch them."""
     try:
-        out = subprocess.run(["sysctl", "-n", "sysctl.proc_translated"],
+        # Absolute path: the launched-app context passes a minimal PATH down
+        # (often without /usr/sbin), and an unresolved "sysctl" would make
+        # the probe silently report "not translated" in the exact context
+        # where translation matters — LS-launched python under Rosetta.
+        out = subprocess.run(["/usr/sbin/sysctl", "-n", "sysctl.proc_translated"],
                              capture_output=True, text=True).stdout.strip()
         return out == "1"
     except Exception:
@@ -286,8 +290,13 @@ def accessibility_trusted(prompt=False):
                 opts, coref.CFStringCreateWithCString(
                     None, b"AXTrustedCheckOptionPrompt", UTF8), kcf_true)
             his.AXIsProcessTrustedWithOptions.restype = ctypes.c_bool
+            # argtypes are load-bearing: without them ctypes passes the
+            # dictionary pointer as a 32-bit c_int, which truncates it and
+            # segfaults inside CFGetTypeID depending on where the heap lands.
+            his.AXIsProcessTrustedWithOptions.argtypes = [ctypes.c_void_p]
             return bool(his.AXIsProcessTrustedWithOptions(opts))
         his.AXIsProcessTrusted.restype = ctypes.c_bool
+        his.AXIsProcessTrusted.argtypes = []
         return bool(his.AXIsProcessTrusted())
     except Exception:
         return None
@@ -706,12 +715,22 @@ if __name__ == "__main__":
         payload = json.loads(sys.argv[flag + 1]) if len(sys.argv) > flag + 1 else {}
         run_press_loop(payload)
         raise SystemExit(0)
+    if "--ax-prompt" in sys.argv:
+        # Throwaway child of __main__: raise the Accessibility dialog (if
+        # macOS wants one) and exit. May crash in unusual environments —
+        # by design that costs nothing here.
+        accessibility_trusted(prompt=True)
+        raise SystemExit(0)
     try:
         class BridgeServer(ThreadingHTTPServer):
-            # HTTPServer sets allow_reuse_address=True (SO_REUSEADDR); on
-            # Windows that lets several instances bind 8791 simultaneously,
-            # so /shutdown would only stop whichever one the OS routes to.
-            allow_reuse_address = False
+            # SO_REUSEADDR must stay on (HTTPServer default) on macOS/POSIX:
+            # closed connections linger in TIME_WAIT for up to ~60 s, and a
+            # rebind without it fails that whole window — a Stop bridge
+            # followed by a quick Start would sit "busy". On Windows turning
+            # SO_REUSEADDR on would let a second instance steal the port, so
+            # /shutdown could stop whichever one the OS routes to: keep it
+            # off there.
+            allow_reuse_address = (sys.platform != "win32")
         server = BridgeServer((HOST, PORT), Handler)
     except OSError:
         # A just-stopped instance can still be unwinding, and macOS may fire
@@ -737,7 +756,16 @@ if __name__ == "__main__":
     if sys.platform == "darwin" and not accessibility_trusted():
         # Raise macOS's permission dialog naming the responsible app —
         # without it, key events are silently dropped and the page sits green.
-        accessibility_trusted(prompt=True)
+        # Run the prompt in a throwaway process: this HIServices call has
+        # been seen to segfault some pythons, and its crash must never take
+        # the server down with it.
+        try:
+            subprocess.Popen([sys.executable, os.path.abspath(sys.argv[0]),
+                              "--ax-prompt"],
+                             stdout=subprocess.DEVNULL,
+                             stderr=subprocess.DEVNULL)
+        except OSError:
+            accessibility_trusted(prompt=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
