@@ -4,7 +4,36 @@
 # starts bridge.py from the folder the .app lives in, so moving the whole
 # folder keeps the handler working.
 DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
-cd "$DIR"
-# Arguments (the scheme URL) are ignored — bridge.py already handles the
-# "port busy" case by exiting quietly when a bridge is up.
-exec /usr/bin/env python3 bridge.py
+cd "$DIR" || exit 1
+STOPFILE="/tmp/ech-bridge-stopped"
+LOG="/tmp/ech-app-bridge.log"
+# Any fresh launch clears a pending stop, so the user's Start bridge (or the
+# page's auto-start) always brings the helper back after a Stop.
+rm -f "$STOPFILE"
+# NOTE: no `exec` — replacing this process makes LaunchServices count the app
+# as instantly quit, and repeated launches then get its URL claim silently
+# disabled. Run bridge.py as a child and keep babysitting it.
+while true; do
+  if /usr/bin/curl -s --max-time 1 http://127.0.0.1:8791/ping 2>/dev/null | grep -q '"ok": *true'; then
+    # Some bridge instance is serving (our own child from the previous
+    # iteration, a wrapper-less orphan, or a manual terminal run) — stand by
+    # and adopt it if the serving process ever goes away. Spawning a second
+    # python here would just churn against the busy port.
+    sleep 2
+    continue
+  fi
+  if [ -f "$STOPFILE" ]; then
+    # A supervised child just processed a Stop bridge: stay DOWN until the
+    # next scheme launch clears the flag above. Quit here so the following
+    # Start is a genuine new launch — while this wrapper lives, macOS
+    # delivers startbridge:// as an Apple event to IT, which a bash script
+    # cannot answer (the error -1712 case).
+    exit 0
+  fi
+  # arch -arm64: LaunchServices may hand this app an x86_64 slice (Rosetta),
+  # where python3's libffi crashes calling AXIsProcessTrusted* (SIGSEGV) —
+  # run the helper natively. -u keeps crash evidence in the log.
+  ECH_STOP_FILE="$STOPFILE" /usr/bin/arch -arm64 /usr/bin/env python3 -u bridge.py >> "$LOG" 2>&1
+  echo "$(date '+%H:%M:%S') python exit: $?" >> "$LOG"
+  sleep 2
+done

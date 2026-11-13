@@ -237,6 +237,17 @@ def press_loop_platform_ok():
     return None
 
 
+def _running_translated():
+    """True when this python is x86_64 under Rosetta — there HIServices
+    calls through libffi SIGSEGV (uncatchable), so never touch them."""
+    try:
+        out = subprocess.run(["sysctl", "-n", "sysctl.proc_translated"],
+                             capture_output=True, text=True).stdout.strip()
+        return out == "1"
+    except Exception:
+        return False
+
+
 def accessibility_trusted(prompt=False):
     """True/False via macOS AXIsProcessTrustedWithOptions; None elsewhere.
     Without Accessibility, CoreGraphics key events are SILENTLY dropped, so
@@ -245,6 +256,8 @@ def accessibility_trusted(prompt=False):
     control your computer" dialog naming the responsible app — which points
     into System Settings → Privacy & Security → Accessibility."""
     if sys.platform != "darwin":
+        return None
+    if _running_translated():
         return None
     try:
         import ctypes
@@ -602,6 +615,18 @@ class Handler(BaseHTTPRequestHandler):
             self._json(200, bridge.stop())
         elif self.path.startswith("/shutdown"):
             self._json(200, {"ok": True, "stopping": True})
+            # When the macOS app wrapper supervises this process, a Stop must
+            # STAY stopped: the wrapper would otherwise restart python after
+            # ~2s and the page's wait-for-offline would read the stop as a
+            # failure. /shutdown writes a flag the wrapper waits on; the next
+            # launch clears it (that's "Start bridge").
+            stop_file = os.environ.get("ECH_STOP_FILE")
+            if stop_file:
+                try:
+                    with open(stop_file, "w") as handle:
+                        handle.write("1")
+                except OSError:
+                    pass
             # serve_forever runs on the main thread; this handler thread only
             # sets it in motion, then __main__ cleans the press loop up.
             threading.Thread(target=self.server.shutdown, daemon=True).start()
@@ -689,8 +714,22 @@ if __name__ == "__main__":
             allow_reuse_address = False
         server = BridgeServer((HOST, PORT), Handler)
     except OSError:
-        print(f"Bridge already running (port {PORT} busy) — open the web app and press Start.")
-        raise SystemExit(0)
+        # A just-stopped instance can still be unwinding, and macOS may fire
+        # the scheme handler again right after the user clicks Start bridge —
+        # retry briefly instead of quitting as an instantly-dead app (which
+        # LaunchServices reads as a crash loop and starts silently refusing).
+        server = None
+        deadline = time.time() + 5
+        while server is None and time.time() < deadline:
+            time.sleep(0.5)
+            try:
+                server = BridgeServer((HOST, PORT), Handler)
+            except OSError:
+                pass
+        if server is None:
+            print(f"Bridge already running (port {PORT} busy) — open the web app and press Start.")
+            time.sleep(2)  # never quit instantly: LaunchServices counts it
+            raise SystemExit(0)
     print(f"Enter Key Clicker bridge listening on http://{HOST}:{PORT}")
     print("Open the web app and press Start — presses will land in the frontmost app.")
     print("Stop this helper with Ctrl+C (or just close this window).")
@@ -702,7 +741,9 @@ if __name__ == "__main__":
     try:
         server.serve_forever()
     except KeyboardInterrupt:
-        pass
+        print("Bridge stopped (Ctrl+C).")
+    except BaseException as exc:
+        print(f"Bridge server ended unexpectedly: {exc!r}")
     finally:
         bridge.stop()
         print("\nBridge stopped.")
