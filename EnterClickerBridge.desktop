@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Enter Key Clicker Bridge
+NoDisplay=true
+Terminal=false
+Exec=__DIR__/bridge-launcher-linux.sh
+Categories=Utility;

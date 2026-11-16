@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleName</key><string>EnterClickerBridge</string>
+  <key>CFBundleDisplayName</key><string>Enter Key Clicker Bridge</string>
+  <key>CFBundleIdentifier</key><string>com.ayechanaungthwin.enterclickerbridge</string>
+  <key>CFBundleVersion</key><string>1.0</string>
+  <key>CFBundleExecutable</key><string>EnterClickerBridge</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
+  <!-- Background helper: no Dock icon, no app window -->
+  <key>LSUIElement</key><true/>
+  <key>CFBundleURLTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleURLScheme</key><string>enterclickerbridge</string>
+      <key>CFBundleURLName</key><string>com.ayechanaungthwin.enterclickerbridge</string>
+    </dict>
+  </array>
+</dict>
+</plist>
