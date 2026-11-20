@@ -203,6 +203,157 @@ static void startPressCycle(NSDictionary *cfg) {
     }];
 }
 
+// ---------------------------------------------------------------------------
+// Native aim overlay — the "Pick" flow. bridge.py forwards /aim here and the
+// overlay windows cover every NSScreen, so a press target is pickable
+// anywhere on the screen, not just inside the browser page (the old Tk
+// overlay was page-only once it failed). Coordinates come straight from the
+// event's CGEvent via CGEventGetLocation — the same top-left-origin display
+// space CGEventPost targets in clickXY — so no NSScreen↔CG conversion.
+// ---------------------------------------------------------------------------
+
+static volatile BOOL gAimActive = NO;
+static NSArray<NSWindow *> *gAimWins = nil;
+static CGPoint gAimPoint;
+static BOOL gAimPicked = NO;
+static volatile int gAimGen = 0;   // voids stale timeout blocks across sessions
+static dispatch_semaphore_t gAimSem = nil;
+
+static void aimFinishMain(void) {   // main thread only
+    dispatch_semaphore_t sem = gAimSem;
+    for (NSWindow *w in gAimWins) {
+        [w orderOut:nil];
+        [w close];
+    }
+    gAimWins = nil;
+    gAimSem = nil;
+    dispatch_semaphore_signal(sem);
+}
+
+@interface AimWindow : NSWindow
+@end
+@implementation AimWindow
+// Borderless windows are non-key by default and would never see Esc.
+- (BOOL)canBecomeKeyWindow { return YES; }
+@end
+
+@interface AimView : NSView {
+    NSPoint pt;   // crosshair position in view coordinates
+}
+@end
+@implementation AimView
+- (instancetype)initWithFrame:(NSRect)frame {
+    self = [super initWithFrame:frame];
+    if (self) pt = NSMakePoint(frame.size.width / 2, frame.size.height / 2);
+    return self;
+}
+- (BOOL)acceptsFirstMouse:(NSEvent *)event { return YES; }
+- (BOOL)acceptsFirstResponder { return YES; }
+- (void)updateTrackingAreas {
+    [super updateTrackingAreas];
+    for (NSTrackingArea *a in [self.trackingAreas copy])
+        [self removeTrackingArea:a];
+    [self addTrackingArea:[[NSTrackingArea alloc]
+        initWithRect:self.bounds
+             options:NSTrackingMouseMoved | NSTrackingActiveAlways
+               owner:self userInfo:nil]];
+}
+- (void)mouseMoved:(NSEvent *)event {
+    pt = [self convertPoint:event.locationInWindow fromView:nil];
+    [self setNeedsDisplay:YES];
+}
+- (void)mouseDown:(NSEvent *)event {
+    if (event.type != NSEventTypeLeftMouseDown) return;
+    CGEventRef cge = event.CGEvent;
+    gAimPoint = cge ? CGEventGetLocation(cge) : gAimPoint;
+    gAimPicked = YES;
+    aimFinishMain();
+}
+- (void)keyDown:(NSEvent *)event {
+    if (event.keyCode == 53) aimFinishMain();   // kVK_Escape → cancelled
+}
+- (void)drawRect:(NSRect)rect {
+    [[NSColor colorWithWhite:0 alpha:0.35] setFill];
+    NSRectFill(rect);
+    // Crosshair through the cursor, in the same indigo palette as the page.
+    NSBezierPath *lines = [NSBezierPath bezierPath];
+    [lines moveToPoint:NSMakePoint(rect.origin.x, pt.y)];
+    [lines lineToPoint:NSMakePoint(rect.origin.x + rect.size.width, pt.y)];
+    [lines moveToPoint:NSMakePoint(pt.x, rect.origin.y)];
+    [lines lineToPoint:NSMakePoint(pt.x, rect.origin.y + rect.size.height)];
+    [lines setLineWidth:2];
+    [[NSColor colorWithSRGBRed:0.506 green:0.549 blue:0.973 alpha:1] setStroke];
+    [lines stroke];
+    NSBezierPath *ring = [NSBezierPath bezierPathWithOvalInRect:
+        NSMakeRect(pt.x - 16, pt.y - 16, 32, 32)];
+    [ring setLineWidth:2];
+    [ring stroke];
+    NSDictionary *attrs = @{
+        NSFontAttributeName: [NSFont boldSystemFontOfSize:24],
+        NSForegroundColorAttributeName: [NSColor colorWithSRGBRed:0.647
+            green:0.706 blue:0.989 alpha:1],
+    };
+    NSString *hint = @"Click to set the press target — Esc cancels";
+    NSSize sz = [hint sizeWithAttributes:attrs];
+    [hint drawAtPoint:NSMakePoint(rect.origin.x + rect.size.width / 2 - sz.width / 2,
+                                  rect.origin.y + rect.size.height - 70)
+       withAttributes:attrs];
+}
+@end
+
+static void showAimOverlayMain(double timeout) {   // main thread only
+    NSMutableArray *wins = [NSMutableArray array];
+    for (NSScreen *screen in [NSScreen screens]) {
+        AimWindow *w = [[AimWindow alloc]
+            initWithContentRect:screen.frame
+                      styleMask:NSWindowStyleMaskBorderless
+                        backing:NSBackingStoreBuffered
+                          defer:NO screen:screen];
+        w.level = NSScreenSaverWindowLevel;
+        w.opaque = NO;
+        w.hasShadow = NO;
+        w.backgroundColor = [NSColor clearColor];
+        w.releasedWhenClosed = NO;
+        w.contentView = [[AimView alloc] initWithFrame:screen.frame];
+        [wins addObject:w];
+    }
+    gAimWins = wins;
+    for (NSWindow *w in wins) {
+        if (w == wins.lastObject) [w makeKeyAndOrderFront:nil];
+        else [w orderFrontRegardless];
+    }
+    [NSApp activateIgnoringOtherApps:YES];
+    // Belt-and-braces self-cancel: the HTTP waiter's semaphore has a small
+    // grace beyond `timeout`, so the overlay itself must end the session.
+    // gAimGen voids blocks left over from a finished overlay session.
+    int gen = gAimGen;
+    dispatch_after(
+        dispatch_time(DISPATCH_TIME_NOW, (int64_t)(timeout * NSEC_PER_SEC)),
+        dispatch_get_main_queue(), ^{
+            if (gAimWins && gAimGen == gen) aimFinishMain();
+        });
+}
+
+// Runs on a detached HTTP-handler thread; blocks until the pick resolves.
+static NSString *runAimOverlay(double timeout) {
+    if (gAimActive) return @"{\"ok\":false,\"reason\":\"unavailable\"}";
+    gAimActive = YES;
+    gAimGen++;
+    gAimPicked = NO;
+    gAimSem = dispatch_semaphore_create(0);
+    dispatch_async(dispatch_get_main_queue(), ^{
+        showAimOverlayMain(timeout);
+    });
+    dispatch_semaphore_wait(gAimSem,
+        dispatch_time(DISPATCH_TIME_NOW, (int64_t)((timeout + 2.0) * NSEC_PER_SEC)));
+    NSString *reply = gAimPicked
+        ? [NSString stringWithFormat:@"{\"ok\":true,\"x\":%d,\"y\":%d}",
+              (int)gAimPoint.x, (int)gAimPoint.y]
+        : @"{\"ok\":false,\"reason\":\"cancelled\"}";
+    gAimActive = NO;
+    return reply;
+}
+
 static NSString *jsonReply(NSString *body) {
     return [NSString stringWithFormat:
         @"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n"
@@ -296,9 +447,29 @@ static void servePressPort(void) {
                 startPressCycle(cfg);
                 reply = jsonReply(@"{\"ok\":true}");
             }
+        } else if ([headStr hasPrefix:@"POST /aim"]) {
+            // The overlay blocks for up to `timeout` seconds — the accept
+            // loop must keep answering /ax, /press, /stop meanwhile, so the
+            // aim handler lives on its own thread (it owns the reply/close).
+            NSDictionary *cfg = body
+                ? [NSJSONSerialization JSONObjectWithData:body options:0 error:nil]
+                : nil;
+            double aimTimeout = 15.0;
+            if (cfg[@"timeout"] != nil) {
+                double t = [cfg[@"timeout"] doubleValue];
+                if (t >= 1 && t <= 60) aimTimeout = t;
+            }
+            int aimSock = c;
+            [NSThread detachNewThreadWithBlock:^{
+                NSData *out = [jsonReply(runAimOverlay(aimTimeout))
+                    dataUsingEncoding:NSUTF8StringEncoding];
+                write(aimSock, out.bytes, out.length);
+                close(aimSock);
+            }];
         } else {
             reply = jsonReply(@"{\"ok\":false}");
         }
+        if (reply == nil) continue;   // handled asynchronously on its own thread
         NSData *out = [reply dataUsingEncoding:NSUTF8StringEncoding];
         write(c, out.bytes, out.length);
         close(c);

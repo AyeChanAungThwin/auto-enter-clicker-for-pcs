@@ -674,6 +674,20 @@ class Handler(BaseHTTPRequestHandler):
             if not (1 <= timeout <= AIM_TIMEOUT_MAX):
                 self._json(400, {"ok": False, "error": "timeout out of range"})
                 return
+            # The stub's native overlay comes first — it covers every screen
+            # so targets are pickable outside the browser page. The Tk overlay
+            # stays as the fallback for runs with no stub listening (manual
+            # `python3 bridge.py`). _stub_post returns None without a stub,
+            # and a stub predating /aim answers {"ok":false} (no "reason").
+            stub = _stub_post("/aim", {"timeout": timeout}, timeout=timeout + 2)
+            if stub is not None and "reason" in stub:
+                if stub.get("ok"):
+                    self._json(200, {"ok": True, "x": stub["x"], "y": stub["y"]})
+                elif stub["reason"] == "cancelled":
+                    self._json(200, {"ok": False, "reason": "cancelled"})
+                else:
+                    self._json(200, {"ok": False, "reason": "unavailable"})
+                return
             result = aim_overlay.pick(timeout)
             if result["picked"]:
                 self._json(200, {"ok": True, "x": result["x"], "y": result["y"]})
